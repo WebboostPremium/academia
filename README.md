@@ -75,3 +75,4 @@ npm run build
 ## Documentación
 
 Arquitectura completa: `docs/ARQUITECTURA-CATEQUESIS-ONLINE.md`
+"# proyecto" 
