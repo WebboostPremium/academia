@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Catequesis Online
 
-## Getting Started
+Plataforma LMS institucional para preparación sacramental: **Bautismo**, **Primera Comunión** y **Confirmación**.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 · React 19 · TypeScript · Tailwind CSS v4
+- Shadcn UI · Framer Motion · Recharts · Sonner
+- Firebase Auth · Firestore · Storage · Admin SDK
+- Wompi El Salvador (pagos únicos por curso)
+
+## Inicio rápido
 
 ```bash
+npm install
+cp .env.example .env.local
+# Completar variables Firebase y Wompi
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abrir [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Datos iniciales (desarrollo)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+curl -X POST http://localhost:3000/api/seed
+```
 
-## Learn More
+Crea los 3 cursos sacramentales, 5 oraciones y configuración global.
 
-To learn more about Next.js, take a look at the following resources:
+### Primer administrador
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Regístrate en `/registro`
+2. Firebase Console → Firestore → `users/{uid}` → `role: "admin"`
+3. Cierra sesión y vuelve a entrar → `/admin`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Rutas principales
 
-## Deploy on Vercel
+| Área | Ruta | Descripción |
+|------|------|-------------|
+| Público | `/`, `/cursos`, `/nosotros`, `/contacto` | Landing y catálogo |
+| Auth | `/login`, `/registro`, `/recuperar` | Autenticación |
+| Admin | `/admin` | 15 módulos de gestión |
+| Catequista | `/catequista` | Estudiantes, tareas, asistencia |
+| Estudiante | `/estudiante` | Cursos, lecciones, evaluaciones |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## API
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Endpoint | Descripción |
+|----------|-------------|
+| `POST /api/seed` | Datos iniciales (solo dev) |
+| `POST /api/payments/create` | Checkout Wompi |
+| `POST /api/payments/webhook` | Webhook Wompi |
+| `POST /api/certificates/generate` | Emitir certificado PDF |
+| `POST /api/upload` | Subir PDF (tareas) |
+
+## Firebase
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes,storage
+```
+
+### Webhook Wompi
+
+URL: `https://tu-dominio.com/api/payments/webhook`
+
+## Despliegue (Cloudflare Pages)
+
+```bash
+npm run build
+# Configurar variables de entorno en Cloudflare Dashboard
+# Build: npx @cloudflare/next-on-pages
+```
+
+## Documentación
+
+Arquitectura completa: `docs/ARQUITECTURA-CATEQUESIS-ONLINE.md`
