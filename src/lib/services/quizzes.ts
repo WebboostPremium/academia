@@ -1,10 +1,7 @@
-import { collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp } from "firebase/firestore";
+import { fsCollection, fsDoc } from "@/lib/firebase/firestore-helpers";
 import { toDate } from "@/lib/firebase/converters";
 import type { Quiz, QuizResult } from "@/types/course";
-
-const quizzesCol = collection(db, "quizzes");
-const resultsCol = collection(db, "quiz_results");
 
 function mapQuiz(id: string, d: Record<string, unknown>): Quiz {
   return {
@@ -21,7 +18,7 @@ function mapQuiz(id: string, d: Record<string, unknown>): Quiz {
 }
 
 export async function getQuizzes(courseId?: string): Promise<Quiz[]> {
-  const q = courseId ? query(quizzesCol, where("courseId", "==", courseId)) : query(quizzesCol);
+  const q = courseId ? query(fsCollection("quizzes"), where("courseId", "==", courseId)) : query(fsCollection("quizzes"));
   const snap = await getDocs(q);
   return snap.docs
     .map((d) => mapQuiz(d.id, d.data()))
@@ -29,25 +26,25 @@ export async function getQuizzes(courseId?: string): Promise<Quiz[]> {
 }
 
 export async function getQuiz(id: string): Promise<Quiz | null> {
-  const snap = await getDoc(doc(db, "quizzes", id));
+  const snap = await getDoc(fsDoc("quizzes", id));
   return snap.exists() ? mapQuiz(snap.id, snap.data()) : null;
 }
 
 export async function createQuiz(data: Omit<Quiz, "id" | "createdAt" | "updatedAt">): Promise<string> {
-  const ref = await addDoc(quizzesCol, { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  const ref = await addDoc(fsCollection("quizzes"), { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
   return ref.id;
 }
 
 export async function updateQuiz(id: string, data: Partial<Quiz>): Promise<void> {
-  await updateDoc(doc(db, "quizzes", id), { ...data, updatedAt: serverTimestamp() });
+  await updateDoc(fsDoc("quizzes", id), { ...data, updatedAt: serverTimestamp() });
 }
 
 export async function deleteQuiz(id: string): Promise<void> {
-  await deleteDoc(doc(db, "quizzes", id));
+  await deleteDoc(fsDoc("quizzes", id));
 }
 
 export async function getQuizResults(userId: string, quizId: string): Promise<QuizResult[]> {
-  const snap = await getDocs(query(resultsCol, where("userId", "==", userId), where("quizId", "==", quizId), orderBy("attemptNumber")));
+  const snap = await getDocs(query(fsCollection("quiz_results"), where("userId", "==", userId), where("quizId", "==", quizId), orderBy("attemptNumber")));
   return snap.docs.map((d) => {
     const data = d.data();
     return { id: d.id, userId: data.userId, quizId: data.quizId, courseId: data.courseId,
@@ -58,7 +55,7 @@ export async function getQuizResults(userId: string, quizId: string): Promise<Qu
 }
 
 export async function submitQuizResult(data: Omit<QuizResult, "id">): Promise<string> {
-  const ref = await addDoc(resultsCol, { ...data, startedAt: data.startedAt, completedAt: data.completedAt });
+  const ref = await addDoc(fsCollection("quiz_results"), { ...data, startedAt: data.startedAt, completedAt: data.completedAt });
   return ref.id;
 }
 

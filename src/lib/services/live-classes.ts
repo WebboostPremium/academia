@@ -1,11 +1,10 @@
-import { collection, doc, getDocs, addDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { getDocs, addDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp } from "firebase/firestore";
+import { fsCollection, fsDoc } from "@/lib/firebase/firestore-helpers";
 import { toDate } from "@/lib/firebase/converters";
 import type { LiveClass } from "@/types";
 
-const col = collection(db, "live_classes");
-
 export async function getLiveClasses(courseId?: string): Promise<LiveClass[]> {
+  const col = fsCollection("live_classes");
   const q = courseId
     ? query(col, where("courseId", "==", courseId), orderBy("scheduledAt", "asc"))
     : query(col, orderBy("scheduledAt", "asc"));
@@ -23,14 +22,14 @@ export async function getUpcomingClasses(courseId?: string): Promise<LiveClass[]
 }
 
 export async function createLiveClass(data: Omit<LiveClass, "id" | "createdAt" | "updatedAt">): Promise<string> {
-  const ref = await addDoc(col, { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  const ref = await addDoc(fsCollection("live_classes"), { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
   return ref.id;
 }
 
 export async function updateLiveClass(id: string, data: Partial<LiveClass>): Promise<void> {
-  await updateDoc(doc(db, "live_classes", id), { ...data, updatedAt: serverTimestamp() });
+  await updateDoc(fsDoc("live_classes", id), { ...data, updatedAt: serverTimestamp() });
 }
 
 export async function deleteLiveClass(id: string): Promise<void> {
-  await deleteDoc(doc(db, "live_classes", id));
+  await deleteDoc(fsDoc("live_classes", id));
 }

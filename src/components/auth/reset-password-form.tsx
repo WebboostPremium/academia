@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
+import { getClientAuth } from "@/lib/firebase/client";
 import { resetPasswordSchema } from "@/lib/validations/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,7 @@ export function ResetPasswordForm() {
 
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(getClientAuth(), email);
       setSuccess(true);
     } catch {
       setError("No se pudo enviar el correo de recuperación");

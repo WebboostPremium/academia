@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
+import { getClientAuth } from "@/lib/firebase/client";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 import { getRoleHomePath } from "@/lib/constants/routes";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ export function LoginForm() {
 
     setLoading(true);
     try {
-      const credential = await signInWithEmailAndPassword(auth, form.email, form.password);
+      const credential = await signInWithEmailAndPassword(getClientAuth(), form.email, form.password);
       const idToken = await credential.user.getIdToken();
       const sessionRes = await fetch("/api/auth/session", {
         method: "POST",

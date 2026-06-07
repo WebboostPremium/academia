@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { verifySessionToken, getSessionCookieName } from "@/lib/auth/session";
-import { generateReference } from "@/lib/services/payments";
+import { generateReference } from "@/lib/utils/payment-reference";
 import { FieldValue } from "firebase-admin/firestore";
+
+export const dynamic = "force-dynamic";
 
 const WOMPI_API = process.env.WOMPI_API_URL ?? "https://api.wompi.sv/v1";
 

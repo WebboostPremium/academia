@@ -1,11 +1,10 @@
-import { collection, doc, getDocs, addDoc, updateDoc, query, where, orderBy, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { getDocs, addDoc, updateDoc, query, where, orderBy, serverTimestamp } from "firebase/firestore";
+import { fsCollection, fsDoc } from "@/lib/firebase/firestore-helpers";
 import { toDate } from "@/lib/firebase/converters";
 import type { Certificate } from "@/types";
 
-const col = collection(db, "certificates");
-
 export async function getCertificates(filters?: { userId?: string; courseId?: string }): Promise<Certificate[]> {
+  const col = fsCollection("certificates");
   let q = query(col, orderBy("issuedAt", "desc"));
   if (filters?.userId) q = query(col, where("userId", "==", filters.userId), orderBy("issuedAt", "desc"));
   const snap = await getDocs(q);
@@ -18,16 +17,16 @@ export async function getCertificates(filters?: { userId?: string; courseId?: st
 }
 
 export async function createCertificate(data: Omit<Certificate, "id" | "issuedAt">): Promise<string> {
-  const ref = await addDoc(col, { ...data, status: "active", issuedAt: serverTimestamp() });
+  const ref = await addDoc(fsCollection("certificates"), { ...data, status: "active", issuedAt: serverTimestamp() });
   return ref.id;
 }
 
 export async function revokeCertificate(id: string, reason: string): Promise<void> {
-  await updateDoc(doc(db, "certificates", id), { status: "revoked", revokedAt: serverTimestamp(), revokedReason: reason });
+  await updateDoc(fsDoc("certificates", id), { status: "revoked", revokedAt: serverTimestamp(), revokedReason: reason });
 }
 
 export async function generateCertificateNumber(): Promise<string> {
-  const snap = await getDocs(query(col, orderBy("issuedAt", "desc")));
+  const snap = await getDocs(query(fsCollection("certificates"), orderBy("issuedAt", "desc")));
   const count = snap.size + 1;
   return `CERT-${new Date().getFullYear()}-${String(count).padStart(5, "0")}`;
 }

@@ -1,9 +1,7 @@
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, query, where, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { getDoc, getDocs, setDoc, updateDoc, query, where, serverTimestamp } from "firebase/firestore";
+import { fsCollection, fsDoc } from "@/lib/firebase/firestore-helpers";
 import { toDate } from "@/lib/firebase/converters";
 import type { Enrollment } from "@/types/course";
-
-const col = collection(db, "enrollments");
 
 function mapEnrollment(id: string, d: Record<string, unknown>): Enrollment {
   const p = d.progress as Enrollment["progress"];
@@ -17,25 +15,25 @@ function mapEnrollment(id: string, d: Record<string, unknown>): Enrollment {
 }
 
 export async function getEnrollment(userId: string, courseId: string): Promise<Enrollment | null> {
-  const snap = await getDocs(query(col, where("userId", "==", userId), where("courseId", "==", courseId)));
+  const snap = await getDocs(query(fsCollection("enrollments"), where("userId", "==", userId), where("courseId", "==", courseId)));
   if (snap.empty) return null;
   const d = snap.docs[0];
   return mapEnrollment(d.id, d.data());
 }
 
 export async function getUserEnrollments(userId: string): Promise<Enrollment[]> {
-  const snap = await getDocs(query(col, where("userId", "==", userId)));
+  const snap = await getDocs(query(fsCollection("enrollments"), where("userId", "==", userId)));
   return snap.docs.map((d) => mapEnrollment(d.id, d.data()));
 }
 
 export async function getCourseEnrollments(courseId: string): Promise<Enrollment[]> {
-  const snap = await getDocs(query(col, where("courseId", "==", courseId)));
+  const snap = await getDocs(query(fsCollection("enrollments"), where("courseId", "==", courseId)));
   return snap.docs.map((d) => mapEnrollment(d.id, d.data()));
 }
 
 export async function createEnrollment(userId: string, courseId: string, paymentId?: string): Promise<string> {
   const id = `${userId}_${courseId}`;
-  await setDoc(doc(db, "enrollments", id), {
+  await setDoc(fsDoc("enrollments", id), {
     userId, courseId, paymentId: paymentId ?? null, status: "active",
     enrolledAt: serverTimestamp(),
     progress: { percentComplete: 0, modulesCompleted: [], lessonsCompleted: [], quizzesPassed: [],
@@ -45,7 +43,7 @@ export async function createEnrollment(userId: string, courseId: string, payment
 }
 
 export async function updateEnrollmentProgress(id: string, progress: Partial<Enrollment["progress"]>): Promise<void> {
-  await updateDoc(doc(db, "enrollments", id), { progress: { ...progress, lastActivityAt: serverTimestamp() } });
+  await updateDoc(fsDoc("enrollments", id), { progress: { ...progress, lastActivityAt: serverTimestamp() } });
 }
 
 export async function markLessonComplete(enrollmentId: string, lessonId: string, totalLessons: number, current: Enrollment): Promise<void> {
@@ -55,7 +53,7 @@ export async function markLessonComplete(enrollmentId: string, lessonId: string,
 }
 
 export async function resetEnrollmentProgress(id: string): Promise<void> {
-  await updateDoc(doc(db, "enrollments", id), {
+  await updateDoc(fsDoc("enrollments", id), {
     progress: { percentComplete: 0, modulesCompleted: [], lessonsCompleted: [], quizzesPassed: [],
       finalExamPassed: false, averageScore: 0, lastActivityAt: serverTimestamp() },
     status: "active", completedAt: null,

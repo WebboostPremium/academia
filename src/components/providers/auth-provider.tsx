@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged, signOut as firebaseSignOut, type User } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
+import { getClientAuth } from "@/lib/firebase/client";
 import { getUserDocument } from "@/lib/services/users";
 import type { AppUser } from "@/types/user";
 
@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+    const unsubscribe = onAuthStateChanged(getClientAuth(), async (fbUser) => {
       setFirebaseUser(fbUser);
       await loadUser(fbUser);
       setLoading(false);
@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     await fetch("/api/auth/session", { method: "DELETE" });
-    await firebaseSignOut(auth);
+    await firebaseSignOut(getClientAuth());
     setUser(null);
     setFirebaseUser(null);
   }, []);

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
+import { getClientAuth } from "@/lib/firebase/client";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 import { getRoleHomePath } from "@/lib/constants/routes";
 import { ROLES } from "@/lib/constants/roles";
@@ -48,7 +48,7 @@ export function RegisterForm() {
         throw new Error(registerData.error ?? "Error al registrar");
       }
 
-      const credential = await signInWithEmailAndPassword(auth, form.email, form.password);
+      const credential = await signInWithEmailAndPassword(getClientAuth(), form.email, form.password);
       const idToken = await credential.user.getIdToken();
 
       await fetch("/api/auth/session", {

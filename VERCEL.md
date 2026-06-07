@@ -9,7 +9,9 @@
 
 ## 2. Variables de entorno (Settings → Environment Variables)
 
-Copia desde tu `.env.local`:
+Copia desde tu `.env.local` (marca **Production**, **Preview** y **Development**):
+
+> Si falta o está mal `NEXT_PUBLIC_FIREBASE_API_KEY`, el build falla con `auth/invalid-api-key`.
 
 | Variable | Requerida |
 |----------|-----------|

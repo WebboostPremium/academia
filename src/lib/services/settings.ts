@@ -1,5 +1,5 @@
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { fsDoc } from "@/lib/firebase/firestore-helpers";
 import type { AppSettings } from "@/types/settings";
 
 const SETTINGS_DOC = "global";
@@ -29,7 +29,7 @@ export const DEFAULT_SETTINGS: Omit<AppSettings, "updatedAt" | "updatedBy"> = {
 };
 
 export async function getSettings(): Promise<AppSettings | null> {
-  const snap = await getDoc(doc(db, "settings", SETTINGS_DOC));
+  const snap = await getDoc(fsDoc("settings", SETTINGS_DOC));
   if (!snap.exists()) return null;
 
   const data = snap.data();
@@ -52,7 +52,7 @@ export async function saveInstitutionSettings(
   updatedBy: string
 ): Promise<void> {
   await setDoc(
-    doc(db, "settings", SETTINGS_DOC),
+    fsDoc("settings", SETTINGS_DOC),
     {
       institution,
       updatedAt: serverTimestamp(),
@@ -67,7 +67,7 @@ export async function saveBrandingSettings(
   updatedBy: string
 ): Promise<void> {
   await setDoc(
-    doc(db, "settings", SETTINGS_DOC),
+    fsDoc("settings", SETTINGS_DOC),
     { branding, updatedAt: serverTimestamp(), updatedBy },
     { merge: true }
   );
@@ -78,7 +78,7 @@ export async function saveWompiSettings(
   updatedBy: string
 ): Promise<void> {
   await setDoc(
-    doc(db, "settings", SETTINGS_DOC),
+    fsDoc("settings", SETTINGS_DOC),
     { wompi, updatedAt: serverTimestamp(), updatedBy },
     { merge: true }
   );
@@ -89,7 +89,7 @@ export async function saveCertificateSettings(
   updatedBy: string
 ): Promise<void> {
   await setDoc(
-    doc(db, "settings", SETTINGS_DOC),
+    fsDoc("settings", SETTINGS_DOC),
     { certificates, updatedAt: serverTimestamp(), updatedBy },
     { merge: true }
   );
