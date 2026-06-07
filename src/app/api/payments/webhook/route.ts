@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase/admin";
+import { sendPurchaseEmail } from "@/lib/server/email";
 import { FieldValue } from "firebase-admin/firestore";
 import crypto from "crypto";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -87,6 +90,32 @@ export async function POST(request: NextRequest) {
 
     await db.collection("courses").doc(payment.courseId).update({
       "stats.enrollmentCount": FieldValue.increment(1),
+    });
+
+    if (payment.couponId) {
+      await db.collection("coupons").doc(payment.couponId).update({
+        usedCount: FieldValue.increment(1),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+
+    const userDoc = await db.collection("users").doc(payment.userId).get();
+    const courseTitle = courseDoc.data()?.title ?? "Curso";
+    const userData = userDoc.data();
+    if (userData?.email) {
+      const amount = `$${((payment.amount ?? 0) / 100).toFixed(2)}`;
+      await sendPurchaseEmail(userData.email, userData.displayName ?? "Estudiante", courseTitle, amount);
+    }
+
+    await db.collection("activity_logs").add({
+      userId: payment.userId,
+      userName: userData?.displayName ?? "Estudiante",
+      userRole: userData?.role ?? "estudiante",
+      action: "payment.approved",
+      entityType: "payment",
+      entityId: paymentDoc.id,
+      details: `Pago aprobado: ${courseTitle}`,
+      createdAt: FieldValue.serverTimestamp(),
     });
   } else if (status === "DECLINED" || status === "VOIDED") {
     await paymentDoc.ref.update({ status: "declined" });

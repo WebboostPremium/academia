@@ -1,4 +1,5 @@
-export type CourseSlug = "bautismo" | "primera-comunion" | "confirmacion";
+/** Slug único por curso; los sacramentales usan bautismo, primera-comunion, confirmacion */
+export type CourseSlug = string;
 export type CourseStatus = "draft" | "published" | "archived";
 
 export interface Course {

@@ -19,6 +19,7 @@ import {
   duplicateCourse,
   publishCourse,
 } from "@/lib/services/courses";
+import { logActivity } from "@/lib/services/activity-logs";
 import { ImageUpload } from "@/components/shared/image-upload";
 import { formatCurrency } from "@/lib/utils/format";
 import type { Course, CourseSlug } from "@/types/course";
@@ -137,12 +138,27 @@ export default function CursosAdminPage() {
   }
 
   async function handleDuplicate(id: string) {
+    const course = courses.find((c) => c.id === id);
+    setSaving(true);
     try {
-      await duplicateCourse(id);
-      toast.success("Curso duplicado");
+      const newId = await duplicateCourse(id);
+      if (user) {
+        await logActivity({
+          userId: user.uid,
+          userName: user.displayName,
+          userRole: user.role,
+          action: "course.duplicate",
+          entityType: "course",
+          entityId: newId,
+          details: `Duplicado: ${course?.title ?? id}`,
+        });
+      }
+      toast.success("Curso duplicado con módulos, lecciones y quizzes");
       await load();
     } catch {
-      toast.error("Error al duplicar");
+      toast.error("Error al duplicar el curso");
+    } finally {
+      setSaving(false);
     }
   }
 

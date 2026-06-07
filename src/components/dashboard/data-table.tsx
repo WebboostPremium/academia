@@ -15,7 +15,20 @@ export function DataTable<T extends object>({ columns, data, keyField }: DataTab
     return <p className="py-8 text-center text-sm text-muted-foreground">No hay datos</p>;
   }
   return (
-    <div className="overflow-x-auto rounded-lg border">
+    <>
+    <div className="space-y-3 md:hidden">
+      {data.map((row) => (
+        <div key={String(row[keyField])} className="card-ring space-y-2 p-4">
+          {columns.map((col) => (
+            <div key={col.key} className="flex flex-col gap-0.5 sm:flex-row sm:justify-between">
+              <span className="text-xs font-medium text-muted-foreground">{col.header}</span>
+              <div className="text-sm">{col.render(row)}</div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+    <div className="hidden overflow-x-auto rounded-lg border md:block">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b bg-muted/50">
@@ -35,5 +48,6 @@ export function DataTable<T extends object>({ columns, data, keyField }: DataTab
         </tbody>
       </table>
     </div>
+    </>
   );
 }

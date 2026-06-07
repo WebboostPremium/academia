@@ -15,6 +15,7 @@ export const estudianteNavItems: NavItem[] = [
   { title: "Certificados", href: "/estudiante/certificados", icon: <Award className="h-4 w-4" /> },
   { title: "Mis Compras", href: "/estudiante/compras", icon: <ShoppingBag className="h-4 w-4" /> },
   { title: "Clases en Vivo", href: "/estudiante/clases", icon: <Calendar className="h-4 w-4" /> },
+  { title: "Calendario", href: "/estudiante/calendario", icon: <Calendar className="h-4 w-4" /> },
   { title: "Foro", href: "/estudiante/foro", icon: <MessageSquare className="h-4 w-4" /> },
   { title: "Mi Perfil", href: "/estudiante/perfil", icon: <User className="h-4 w-4" /> },
 ];

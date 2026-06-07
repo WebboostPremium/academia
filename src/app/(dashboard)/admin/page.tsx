@@ -1,159 +1,92 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, BookOpen, DollarSign, Award, FileText, Calendar } from "lucide-react";
+import { Users, BookOpen, DollarSign, Award, FileText, Calendar, TrendingUp } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { getAllUsers } from "@/lib/services/users";
-import { getCourses } from "@/lib/services/courses";
-import { getPayments } from "@/lib/services/payments";
-import { getCertificates } from "@/lib/services/certificates";
-import { getSubmissions } from "@/lib/services/assignments";
-import { getUpcomingClasses } from "@/lib/services/live-classes";
-import { ROLES } from "@/lib/constants/roles";
+import { getDashboardAnalytics } from "@/lib/services/analytics";
 import { formatCurrency } from "@/lib/utils/format";
-import { SalesChart, StudentsChart, CoursesPieChart, CertificatesChart } from "@/components/dashboard/charts";
+import {
+  SalesChart,
+  StudentsChart,
+  CoursesPieChart,
+  CertificatesChart,
+  RevenueAreaChart,
+  TopCoursesBarChart,
+} from "@/components/dashboard/charts";
 
 export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    students: 0,
-    activeCourses: 0,
-    monthlyRevenue: 0,
-    annualRevenue: 0,
-    totalRevenue: 0,
-    coursesSold: 0,
-    certificates: 0,
-    pendingSubmissions: 0,
-    upcomingClasses: 0,
-  });
-  const [salesData, setSalesData] = useState<Array<{ month: string; total: number }>>([]);
-  const [studentsData, setStudentsData] = useState<Array<{ month: string; count: number }>>([]);
-  const [coursesData, setCoursesData] = useState<Array<{ name: string; value: number }>>([]);
-  const [certificatesData, setCertificatesData] = useState<Array<{ month: string; count: number }>>([]);
+  const [data, setData] = useState<Awaited<ReturnType<typeof getDashboardAnalytics>> | null>(null);
 
   useEffect(() => {
-    async function load() {
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const yearStart = new Date(now.getFullYear(), 0, 1);
-
-      const [students, courses, payments, certificates, submissions, upcoming] = await Promise.all([
-        getAllUsers(ROLES.ESTUDIANTE),
-        getCourses("published"),
-        getPayments(),
-        getCertificates(),
-        getSubmissions({ status: "pending" }),
-        getUpcomingClasses(),
-      ]);
-
-      const approved = payments.filter((p) => p.status === "approved");
-      const monthlyRevenue = approved
-        .filter((p) => p.approvedAt && p.approvedAt >= monthStart)
-        .reduce((sum, p) => sum + p.amount, 0);
-      const annualRevenue = approved
-        .filter((p) => p.approvedAt && p.approvedAt >= yearStart)
-        .reduce((sum, p) => sum + p.amount, 0);
-      const totalRevenue = approved.reduce((sum, p) => sum + p.amount, 0);
-      const coursesSold = approved.length;
-
-      const months = Array.from({ length: 6 }, (_, i) => {
-        const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-        return { key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleDateString("es", { month: "short" }) };
-      });
-
-      setSalesData(months.map((m) => ({
-        month: m.label,
-        total: approved.filter((p) => p.approvedAt && `${p.approvedAt.getFullYear()}-${p.approvedAt.getMonth()}` === m.key).reduce((s, p) => s + p.amount, 0),
-      })));
-
-      setStudentsData(months.map((m) => ({
-        month: m.label,
-        count: students.filter((s) => `${s.createdAt.getFullYear()}-${s.createdAt.getMonth()}` === m.key).length,
-      })));
-
-      const courseSales: Record<string, number> = {};
-      for (const p of approved) {
-        const c = courses.find((c) => c.id === p.courseId);
-        const name = c?.title ?? p.courseId;
-        courseSales[name] = (courseSales[name] ?? 0) + 1;
-      }
-      setCoursesData(Object.entries(courseSales).map(([name, value]) => ({ name, value })));
-
-      setCertificatesData(months.map((m) => ({
-        month: m.label,
-        count: certificates.filter((c) => `${c.issuedAt.getFullYear()}-${c.issuedAt.getMonth()}` === m.key).length,
-      })));
-
-      setStats({
-        students: students.length,
-        activeCourses: courses.length,
-        monthlyRevenue,
-        annualRevenue,
-        totalRevenue,
-        coursesSold,
-        certificates: certificates.length,
-        pendingSubmissions: submissions.length,
-        upcomingClasses: upcoming.length,
-      });
+    getDashboardAnalytics(6).then((analytics) => {
+      setData(analytics);
       setLoading(false);
-    }
-    load();
+    });
   }, []);
 
-  if (loading) {
+  if (loading || !data) {
     return <p className="text-muted-foreground">Cargando métricas...</p>;
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Resumen general de la plataforma</p>
+        <h1 className="font-serif text-2xl font-semibold">Dashboard Analytics</h1>
+        <p className="text-muted-foreground">Resumen general de la academia</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Total Estudiantes" value={stats.students} icon={<Users className="h-5 w-5" />} />
-        <StatCard title="Cursos Activos" value={stats.activeCourses} icon={<BookOpen className="h-5 w-5" />} />
-        <StatCard title="Cursos Vendidos" value={stats.coursesSold} icon={<BookOpen className="h-5 w-5" />} />
-        <StatCard title="Ingresos del Mes" value={formatCurrency(stats.monthlyRevenue)} icon={<DollarSign className="h-5 w-5" />} />
+        <StatCard title="Total Estudiantes" value={data.students} icon={<Users className="h-5 w-5" />} />
+        <StatCard title="Cursos Activos" value={data.activeCourses} icon={<BookOpen className="h-5 w-5" />} />
+        <StatCard title="Cursos Vendidos" value={data.coursesSold} icon={<TrendingUp className="h-5 w-5" />} />
+        <StatCard title="Ingresos del Mes" value={formatCurrency(data.monthlyRevenue)} icon={<DollarSign className="h-5 w-5" />} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Ingresos Anuales" value={formatCurrency(stats.annualRevenue)} icon={<DollarSign className="h-5 w-5" />} />
-        <StatCard title="Certificados Emitidos" value={stats.certificates} icon={<Award className="h-5 w-5" />} />
-        <StatCard title="Tareas Pendientes" value={stats.pendingSubmissions} icon={<FileText className="h-5 w-5" />} />
-        <StatCard title="Clases Programadas" value={stats.upcomingClasses} icon={<Calendar className="h-5 w-5" />} />
+        <StatCard title="Ingresos Anuales" value={formatCurrency(data.annualRevenue)} icon={<DollarSign className="h-5 w-5" />} />
+        <StatCard title="Ingresos Totales" value={formatCurrency(data.totalRevenue)} icon={<DollarSign className="h-5 w-5" />} />
+        <StatCard title="Certificados Emitidos" value={data.certificates} icon={<Award className="h-5 w-5" />} />
+        <StatCard title="Clases Programadas" value={data.upcomingClasses} icon={<Calendar className="h-5 w-5" />} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="card-shadow rounded-2xl bg-white p-5">
-          <h3 className="mb-4 font-bold">Ventas por mes</h3>
-          <SalesChart data={salesData} />
+        <div className="card-ring p-5">
+          <h3 className="mb-4 font-serif font-semibold">Ventas por mes</h3>
+          <SalesChart data={data.salesByMonth.map((s) => ({ month: s.month, total: s.total }))} />
         </div>
-        <div className="card-shadow rounded-2xl bg-white p-5">
-          <h3 className="mb-4 font-bold">Nuevos estudiantes</h3>
-          <StudentsChart data={studentsData} />
+        <div className="card-ring p-5">
+          <h3 className="mb-4 font-serif font-semibold">Ingresos — últimos 12 meses</h3>
+          <RevenueAreaChart data={data.revenueByMonth12} />
         </div>
-        {coursesData.length > 0 && (
-          <div className="card-shadow rounded-2xl bg-white p-5">
-            <h3 className="mb-4 font-bold">Cursos más vendidos</h3>
-            <CoursesPieChart data={coursesData} />
-          </div>
+        <div className="card-ring p-5">
+          <h3 className="mb-4 font-serif font-semibold">Nuevos estudiantes</h3>
+          <StudentsChart data={data.studentsByMonth} />
+        </div>
+        <div className="card-ring p-5">
+          <h3 className="mb-4 font-serif font-semibold">Certificados emitidos</h3>
+          <CertificatesChart data={data.certificatesByMonth} />
+        </div>
+        {data.topCourses.length > 0 && (
+          <>
+            <div className="card-ring p-5">
+              <h3 className="mb-4 font-serif font-semibold">Cursos más vendidos</h3>
+              <CoursesPieChart data={data.topCourses.map((c) => ({ name: c.name, value: c.value }))} />
+            </div>
+            <div className="card-ring p-5">
+              <h3 className="mb-4 font-serif font-semibold">Ingresos por curso</h3>
+              <TopCoursesBarChart data={data.topCourses} />
+            </div>
+          </>
         )}
-        <div className="card-shadow rounded-2xl bg-white p-5">
-          <h3 className="mb-4 font-bold">Certificados emitidos</h3>
-          <CertificatesChart data={certificatesData} />
-        </div>
-        <div className="card-shadow rounded-2xl bg-white p-5">
-          <h3 className="mb-4 font-bold">Tareas pendientes</h3>
-          {stats.pendingSubmissions > 0 ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between rounded-lg bg-orange-50 px-4 py-3">
-                <span className="text-sm">Entregas por calificar</span>
-                <span className="rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white">{stats.pendingSubmissions}</span>
-              </div>
+        <div className="card-ring p-5 lg:col-span-2">
+          <h3 className="mb-4 font-serif font-semibold">Tareas pendientes de calificar</h3>
+          {data.pendingSubmissions > 0 ? (
+            <div className="flex items-center justify-between rounded-lg bg-accent/20 px-4 py-3">
+              <span className="text-sm">Entregas por revisar</span>
+              <span className="rounded-full bg-accent px-2.5 py-0.5 text-xs font-bold text-accent-foreground">
+                {data.pendingSubmissions}
+              </span>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">No hay tareas pendientes</p>

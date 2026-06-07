@@ -31,6 +31,11 @@ export interface AppSettings {
   branding: BrandingSettings;
   wompi: WompiSettings;
   certificates: {
+    headerTitle?: string;
+    titleText?: string;
+    bodyText?: string;
+    borderColor?: string;
+    showLogo?: boolean;
     signatureUrl?: string;
     signatureName?: string;
     signatureTitle?: string;
@@ -39,6 +44,15 @@ export interface AppSettings {
   email: {
     fromName: string;
     fromEmail: string;
+    welcomeEnabled?: boolean;
+    purchaseEnabled?: boolean;
+    certificateEnabled?: boolean;
+    reminderEnabled?: boolean;
+  };
+  general: {
+    maintenanceMode?: boolean;
+    allowRegistration?: boolean;
+    promoBanner?: string;
   };
   updatedAt: Date;
   updatedBy: string;

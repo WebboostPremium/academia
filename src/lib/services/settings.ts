@@ -21,10 +21,25 @@ export const DEFAULT_SETTINGS: Omit<AppSettings, "updatedAt" | "updatedBy"> = {
     environment: "sandbox",
     connectionStatus: "disconnected",
   },
-  certificates: {},
+  certificates: {
+    headerTitle: "Catequesis Online",
+    titleText: "Certificado de Participación",
+    bodyText: "Se certifica que",
+    borderColor: "#2d4a7a",
+    showLogo: true,
+  },
   email: {
     fromName: "Catequesis Online",
     fromEmail: "noreply@catequesis.online",
+    welcomeEnabled: true,
+    purchaseEnabled: true,
+    certificateEnabled: true,
+    reminderEnabled: true,
+  },
+  general: {
+    maintenanceMode: false,
+    allowRegistration: true,
+    promoBanner: "",
   },
 };
 
@@ -40,8 +55,9 @@ export async function getSettings(): Promise<AppSettings | null> {
       ...data.wompi,
       lastVerifiedAt: data.wompi?.lastVerifiedAt?.toDate?.(),
     },
-    certificates: data.certificates ?? {},
-    email: data.email,
+    certificates: { ...DEFAULT_SETTINGS.certificates, ...(data.certificates ?? {}) },
+    email: { ...DEFAULT_SETTINGS.email, ...(data.email ?? {}) },
+    general: { ...DEFAULT_SETTINGS.general, ...(data.general ?? {}) },
     updatedAt: data.updatedAt?.toDate?.() ?? new Date(),
     updatedBy: data.updatedBy ?? "",
   };
@@ -91,6 +107,28 @@ export async function saveCertificateSettings(
   await setDoc(
     fsDoc("settings", SETTINGS_DOC),
     { certificates, updatedAt: serverTimestamp(), updatedBy },
+    { merge: true }
+  );
+}
+
+export async function saveEmailSettings(
+  email: AppSettings["email"],
+  updatedBy: string
+): Promise<void> {
+  await setDoc(
+    fsDoc("settings", SETTINGS_DOC),
+    { email, updatedAt: serverTimestamp(), updatedBy },
+    { merge: true }
+  );
+}
+
+export async function saveGeneralSettings(
+  general: NonNullable<AppSettings["general"]>,
+  updatedBy: string
+): Promise<void> {
+  await setDoc(
+    fsDoc("settings", SETTINGS_DOC),
+    { general, updatedAt: serverTimestamp(), updatedBy },
     { merge: true }
   );
 }

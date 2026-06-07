@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
+import { sendWelcomeEmail } from "@/lib/server/email";
 import { registerSchema } from "@/lib/validations/auth";
 import { ROLES } from "@/lib/constants/roles";
 import { FieldValue } from "firebase-admin/firestore";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,6 +45,19 @@ export async function POST(request: NextRequest) {
       achievements: [],
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    await sendWelcomeEmail(email, displayName);
+
+    await db.collection("activity_logs").add({
+      userId: userRecord.uid,
+      userName: displayName,
+      userRole: ROLES.ESTUDIANTE,
+      action: "register",
+      entityType: "user",
+      entityId: userRecord.uid,
+      details: "Nuevo registro",
+      createdAt: FieldValue.serverTimestamp(),
     });
 
     return NextResponse.json({ uid: userRecord.uid });

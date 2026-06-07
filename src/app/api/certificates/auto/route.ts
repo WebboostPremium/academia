@@ -4,6 +4,9 @@ import { getStorage } from "firebase-admin/storage";
 import { verifySessionToken, getSessionCookieName } from "@/lib/auth/session";
 import { FieldValue } from "firebase-admin/firestore";
 import PDFDocument from "pdfkit";
+import { sendCertificateEmail } from "@/lib/server/email";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get(getSessionCookieName())?.value;
@@ -101,6 +104,19 @@ export async function POST(request: NextRequest) {
     userId, type: "certificate", title: "¡Certificado generado!",
     body: `Tu certificado de ${course.title} está listo para descargar.`,
     link: "/estudiante/certificados", read: false,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  await sendCertificateEmail(session.email, session.displayName, course.title);
+
+  await db.collection("activity_logs").add({
+    userId,
+    userName: session.displayName,
+    userRole: session.role,
+    action: "certificate.issue",
+    entityType: "certificate",
+    entityId: certRef.id,
+    details: `Certificado: ${course.title}`,
     createdAt: FieldValue.serverTimestamp(),
   });
 

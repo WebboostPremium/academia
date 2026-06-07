@@ -9,8 +9,11 @@ import {
   saveBrandingSettings,
   saveWompiSettings,
   saveCertificateSettings,
+  saveEmailSettings,
+  saveGeneralSettings,
   DEFAULT_SETTINGS,
 } from "@/lib/services/settings";
+import { CertificatePreview } from "@/components/certificates/certificate-preview";
 import { ImageUpload } from "@/components/shared/image-upload";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -21,13 +24,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import type { AppSettings } from "@/types/settings";
 
-type Tab = "institucion" | "branding" | "wompi" | "certificados";
+type Tab = "institucion" | "branding" | "wompi" | "certificados" | "correos" | "general";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "institucion", label: "Institución" },
   { id: "branding", label: "Branding" },
   { id: "wompi", label: "Wompi" },
   { id: "certificados", label: "Certificados" },
+  { id: "correos", label: "Correos" },
+  { id: "general", label: "General" },
 ];
 
 export default function ConfiguracionPage() {
@@ -41,6 +46,8 @@ export default function ConfiguracionPage() {
   const [branding, setBranding] = useState(DEFAULT_SETTINGS.branding);
   const [wompi, setWompi] = useState(DEFAULT_SETTINGS.wompi);
   const [certificates, setCertificates] = useState(DEFAULT_SETTINGS.certificates);
+  const [email, setEmail] = useState(DEFAULT_SETTINGS.email);
+  const [general, setGeneral] = useState(DEFAULT_SETTINGS.general);
 
   useEffect(() => {
     getSettings().then((settings) => {
@@ -49,6 +56,8 @@ export default function ConfiguracionPage() {
         setBranding(settings.branding);
         setWompi(settings.wompi);
         setCertificates(settings.certificates);
+        setEmail(settings.email);
+        setGeneral(settings.general ?? DEFAULT_SETTINGS.general);
       }
       setLoading(false);
     });
@@ -350,13 +359,33 @@ export default function ConfiguracionPage() {
       )}
 
       {activeTab === "certificados" && (
+        <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Certificados</CardTitle>
-            <CardDescription>Firma y pie de página en certificados PDF</CardDescription>
+            <CardTitle>Constructor de certificados</CardTitle>
+            <CardDescription>Personaliza el diseño del PDF</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSaveCertificates} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="headerTitle">Encabezado</Label>
+                <Input id="headerTitle" value={certificates.headerTitle ?? ""} onChange={(e) => setCertificates((p) => ({ ...p, headerTitle: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="titleText">Título del certificado</Label>
+                <Input id="titleText" value={certificates.titleText ?? ""} onChange={(e) => setCertificates((p) => ({ ...p, titleText: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bodyText">Texto introductorio</Label>
+                <Input id="bodyText" value={certificates.bodyText ?? ""} onChange={(e) => setCertificates((p) => ({ ...p, bodyText: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="borderColor">Color del borde</Label>
+                <div className="flex gap-2">
+                  <Input id="borderColor" type="color" value={certificates.borderColor ?? "#2d4a7a"} onChange={(e) => setCertificates((p) => ({ ...p, borderColor: e.target.value }))} className="h-10 w-14 p-1" />
+                  <Input value={certificates.borderColor ?? "#2d4a7a"} onChange={(e) => setCertificates((p) => ({ ...p, borderColor: e.target.value }))} className="flex-1" />
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="signatureName">Nombre del firmante</Label>
                 <Input
@@ -393,6 +422,49 @@ export default function ConfiguracionPage() {
               <Button type="submit" disabled={saving}>
                 {saving ? "Guardando..." : "Guardar certificados"}
               </Button>
+            </form>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Vista previa</CardTitle></CardHeader>
+          <CardContent>
+            <CertificatePreview institution={institution} certificates={certificates} />
+          </CardContent>
+        </Card>
+        </div>
+      )}
+
+      {activeTab === "correos" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Correos automáticos</CardTitle>
+            <CardDescription>Requiere RESEND_API_KEY en el servidor</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={async (e) => { e.preventDefault(); if (!user) return; setSaving(true); try { await saveEmailSettings(email, user.uid); toast.success("Correos guardados"); } catch { toast.error("Error"); } finally { setSaving(false); } }} className="space-y-4">
+              <div className="space-y-2"><Label>Nombre remitente</Label><Input value={email.fromName} onChange={(e) => setEmail((p) => ({ ...p, fromName: e.target.value }))} /></div>
+              <div className="space-y-2"><Label>Correo remitente</Label><Input type="email" value={email.fromEmail} onChange={(e) => setEmail((p) => ({ ...p, fromEmail: e.target.value }))} /></div>
+              {(["welcomeEnabled", "purchaseEnabled", "certificateEnabled", "reminderEnabled"] as const).map((key) => (
+                <label key={key} className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={email[key] ?? true} onChange={(e) => setEmail((p) => ({ ...p, [key]: e.target.checked }))} />
+                  {key === "welcomeEnabled" ? "Bienvenida al registrarse" : key === "purchaseEnabled" ? "Confirmación de compra" : key === "certificateEnabled" ? "Certificado listo" : "Recordatorios"}
+                </label>
+              ))}
+              <Button type="submit" disabled={saving}>{saving ? "Guardando..." : "Guardar correos"}</Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTab === "general" && (
+        <Card>
+          <CardHeader><CardTitle>Ajustes generales</CardTitle></CardHeader>
+          <CardContent>
+            <form onSubmit={async (e) => { e.preventDefault(); if (!user) return; setSaving(true); try { await saveGeneralSettings(general, user.uid); toast.success("Ajustes guardados"); } catch { toast.error("Error"); } finally { setSaving(false); } }} className="space-y-4">
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={general.allowRegistration ?? true} onChange={(e) => setGeneral((p) => ({ ...p, allowRegistration: e.target.checked }))} /> Permitir nuevos registros</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={general.maintenanceMode ?? false} onChange={(e) => setGeneral((p) => ({ ...p, maintenanceMode: e.target.checked }))} /> Modo mantenimiento</label>
+              <div className="space-y-2"><Label>Banner promocional (home)</Label><Textarea value={general.promoBanner ?? ""} onChange={(e) => setGeneral((p) => ({ ...p, promoBanner: e.target.value }))} rows={2} /></div>
+              <Button type="submit" disabled={saving}>{saving ? "Guardando..." : "Guardar"}</Button>
             </form>
           </CardContent>
         </Card>

@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   const session = token ? await verifySessionToken(token) : null;
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const { courseId } = await request.json();
+  const { courseId, couponCode } = await request.json();
   if (!courseId) return NextResponse.json({ error: "courseId requerido" }, { status: 400 });
 
   const db = getAdminDb();
@@ -40,12 +40,45 @@ export async function POST(request: NextRequest) {
   }
 
   const reference = generateReference(course.slug, session.uid);
-  const amountInCents = course.price;
+  let amountInCents = course.price as number;
+  let discountCents = 0;
+  let couponId: string | undefined;
+
+  if (couponCode) {
+    const code = String(couponCode).trim().toUpperCase();
+    const couponSnap = await db.collection("coupons").where("code", "==", code).limit(1).get();
+    if (couponSnap.empty) {
+      return NextResponse.json({ error: "Cupón no válido" }, { status: 400 });
+    }
+    const coupon = couponSnap.docs[0];
+    const c = coupon.data();
+    const now = new Date();
+    if (c.status !== "active") return NextResponse.json({ error: "Cupón inactivo" }, { status: 400 });
+    if (c.expiresAt?.toDate?.() && c.expiresAt.toDate() < now) {
+      return NextResponse.json({ error: "Cupón expirado" }, { status: 400 });
+    }
+    if (c.maxUses && (c.usedCount ?? 0) >= c.maxUses) {
+      return NextResponse.json({ error: "Cupón agotado" }, { status: 400 });
+    }
+    if (c.courseId && c.courseId !== courseId) {
+      return NextResponse.json({ error: "Cupón no válido para este curso" }, { status: 400 });
+    }
+    discountCents =
+      c.type === "percent"
+        ? Math.round(amountInCents * (c.value / 100))
+        : Math.min(c.value, amountInCents);
+    amountInCents = Math.max(0, amountInCents - discountCents);
+    couponId = coupon.id;
+  }
 
   const paymentRef = await db.collection("payments").add({
     userId: session.uid,
     courseId,
     amount: amountInCents,
+    originalAmount: course.price,
+    discountCents,
+    couponId: couponId ?? null,
+    couponCode: couponCode ? String(couponCode).trim().toUpperCase() : null,
     currency: "USD",
     status: "pending",
     wompi: { transactionId: "", reference },
@@ -85,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     await paymentRef.update({ "wompi.transactionId": transactionId });
 
-    return NextResponse.json({ checkoutUrl, paymentId: paymentRef.id, reference });
+    return NextResponse.json({ checkoutUrl, paymentId: paymentRef.id, reference, amount: amountInCents, discount: discountCents });
   } catch {
     await paymentRef.update({ status: "declined" });
     return NextResponse.json({ error: "Error al conectar con Wompi" }, { status: 502 });

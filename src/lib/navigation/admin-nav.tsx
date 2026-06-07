@@ -1,6 +1,7 @@
 import {
   LayoutDashboard, BookOpen, Layers, PlayCircle, ClipboardList, Users, UserCog,
   CreditCard, Award, FileText, Calendar, Heart, Church, MessageSquare, Bell, Settings, ClipboardCheck,
+  Ticket, ScrollText, CalendarDays,
 } from "lucide-react";
 import type { NavItem } from "@/components/layout/sidebar";
 
@@ -14,6 +15,8 @@ export const adminNavItems: NavItem[] = [
   { title: "Catequistas", href: "/admin/catequistas", icon: <UserCog className="h-4 w-4" /> },
   { title: "Asistencia", href: "/admin/asistencia", icon: <ClipboardCheck className="h-4 w-4" /> },
   { title: "Pagos", href: "/admin/pagos", icon: <CreditCard className="h-4 w-4" /> },
+  { title: "Cupones", href: "/admin/cupones", icon: <Ticket className="h-4 w-4" /> },
+  { title: "Calendario", href: "/admin/calendario", icon: <CalendarDays className="h-4 w-4" /> },
   { title: "Certificados", href: "/admin/certificados", icon: <Award className="h-4 w-4" /> },
   { title: "Tareas", href: "/admin/tareas", icon: <FileText className="h-4 w-4" /> },
   { title: "Clases en Vivo", href: "/admin/clases", icon: <Calendar className="h-4 w-4" /> },
@@ -21,5 +24,6 @@ export const adminNavItems: NavItem[] = [
   { title: "Gestión Sacramental", href: "/admin/sacramental", icon: <Church className="h-4 w-4" /> },
   { title: "Foro", href: "/admin/foro", icon: <MessageSquare className="h-4 w-4" /> },
   { title: "Notificaciones", href: "/admin/notificaciones", icon: <Bell className="h-4 w-4" /> },
+  { title: "Actividad", href: "/admin/actividad", icon: <ScrollText className="h-4 w-4" /> },
   { title: "Configuración", href: "/admin/configuracion", icon: <Settings className="h-4 w-4" /> },
 ];

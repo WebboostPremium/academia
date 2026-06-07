@@ -5,6 +5,7 @@ import {
 import { getClientDb } from "@/lib/firebase/client";
 import { fsCollection, fsDoc } from "@/lib/firebase/firestore-helpers";
 import { toDate } from "@/lib/firebase/converters";
+import { getQuizzes, createQuiz, updateQuiz } from "@/lib/services/quizzes";
 import type { Course, CourseSlug, Module, Lesson } from "@/types/course";
 
 function mapCourse(id: string, d: Record<string, unknown>): Course {
@@ -65,10 +66,106 @@ export async function deleteCourse(id: string): Promise<void> {
   await deleteDoc(fsDoc("courses", id));
 }
 
-export async function duplicateCourse(id: string): Promise<string> {
-  const course = await getCourse(id);
+/** Duplica curso completo: módulos, lecciones, quizzes y referencias (examen final, quiz por lección). */
+export async function duplicateCourse(sourceCourseId: string): Promise<string> {
+  const course = await getCourse(sourceCourseId);
   if (!course) throw new Error("Curso no encontrado");
-  return createCourse({ ...course, title: `${course.title} (copia)`, status: "draft", slug: course.slug });
+
+  const newSlug = `${course.slug}-copia-${Date.now()}`;
+
+  const newCourseId = await createCourse({
+    title: `${course.title} (copia)`,
+    slug: newSlug,
+    description: course.description,
+    shortDescription: course.shortDescription,
+    imageUrl: course.imageUrl,
+    instructor: course.instructor,
+    instructorBio: course.instructorBio,
+    objectives: course.objectives,
+    durationWeeks: course.durationWeeks,
+    durationLabel: course.durationLabel,
+    price: course.price,
+    currency: course.currency,
+    category: course.category,
+    status: "draft",
+    passingScore: course.passingScore,
+    moduleOrder: [],
+  });
+
+  const [modules, lessons, quizzes] = await Promise.all([
+    getModules(sourceCourseId),
+    getLessons(sourceCourseId),
+    getQuizzes(sourceCourseId),
+  ]);
+
+  const quizIdMap = new Map<string, string>();
+  for (const quiz of quizzes) {
+    const newQuizId = await createQuiz({
+      courseId: newCourseId,
+      type: quiz.type,
+      title: quiz.title,
+      description: quiz.description,
+      passingScore: quiz.passingScore,
+      maxAttempts: quiz.maxAttempts,
+      timeLimitMinutes: quiz.timeLimitMinutes,
+      questions: quiz.questions,
+      shuffleQuestions: quiz.shuffleQuestions,
+      shuffleOptions: quiz.shuffleOptions,
+      status: "draft",
+    });
+    quizIdMap.set(quiz.id, newQuizId);
+  }
+
+  const moduleIdMap = new Map<string, string>();
+  const newModuleOrder: string[] = [];
+  for (const mod of [...modules].sort((a, b) => a.order - b.order)) {
+    const newModId = await createModule({
+      courseId: newCourseId,
+      title: mod.title,
+      description: mod.description,
+      order: mod.order,
+      lessonOrder: [],
+      status: mod.status,
+    });
+    moduleIdMap.set(mod.id, newModId);
+    newModuleOrder.push(newModId);
+  }
+
+  const lessonIdMap = new Map<string, string>();
+  for (const lesson of [...lessons].sort((a, b) => a.order - b.order)) {
+    const newModuleId = moduleIdMap.get(lesson.moduleId);
+    if (!newModuleId) continue;
+    const newLessonId = await createLesson({
+      courseId: newCourseId,
+      moduleId: newModuleId,
+      title: lesson.title,
+      description: lesson.description,
+      order: lesson.order,
+      content: lesson.content,
+      quizId: lesson.quizId ? quizIdMap.get(lesson.quizId) : undefined,
+      estimatedMinutes: lesson.estimatedMinutes,
+      status: "draft",
+    });
+    lessonIdMap.set(lesson.id, newLessonId);
+  }
+
+  for (const quiz of quizzes) {
+    if (!quiz.lessonId) continue;
+    const newQuizId = quizIdMap.get(quiz.id);
+    const newLessonId = lessonIdMap.get(quiz.lessonId);
+    if (newQuizId && newLessonId) {
+      await updateQuiz(newQuizId, { lessonId: newLessonId });
+    }
+  }
+
+  const updates: Partial<Course> = { moduleOrder: newModuleOrder };
+  if (course.finalExamQuizId) {
+    const newFinalId = quizIdMap.get(course.finalExamQuizId);
+    if (newFinalId) updates.finalExamQuizId = newFinalId;
+  }
+  await updateCourse(newCourseId, updates);
+
+  return newCourseId;
 }
 
 export async function publishCourse(id: string, publish: boolean): Promise<void> {
