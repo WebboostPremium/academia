@@ -13,6 +13,36 @@ import { getCourses } from "@/lib/services/courses";
 import { getQuizzes, createQuiz, updateQuiz, deleteQuiz } from "@/lib/services/quizzes";
 import type { Course, Quiz, QuizQuestionType } from "@/types/course";
 
+type QuizForm = {
+  title: string;
+  questionType: QuizQuestionType;
+  question: string;
+  optionA: string;
+  optionB: string;
+  optionC: string;
+  optionD: string;
+  correctOption: string;
+  passingScore: string;
+  maxAttempts: string;
+  timeLimitMinutes: string;
+};
+
+type OptionFieldKey = "optionA" | "optionB" | "optionC" | "optionD";
+
+const EMPTY_FORM: QuizForm = {
+  title: "",
+  questionType: "multiple_choice",
+  question: "",
+  optionA: "",
+  optionB: "",
+  optionC: "",
+  optionD: "",
+  correctOption: "0",
+  passingScore: "70",
+  maxAttempts: "3",
+  timeLimitMinutes: "",
+};
+
 export default function QuizzesAdminPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [courseId, setCourseId] = useState("");
@@ -21,19 +51,7 @@ export default function QuizzesAdminPage() {
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    title: "",
-    questionType: "multiple_choice" as QuizQuestionType,
-    question: "",
-    optionA: "",
-    optionB: "",
-    optionC: "",
-    optionD: "",
-    correctOption: "0",
-    passingScore: "70",
-    maxAttempts: "3",
-    timeLimitMinutes: "",
-  });
+  const [form, setForm] = useState<QuizForm>(EMPTY_FORM);
 
   const selectClass =
     "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -101,7 +119,7 @@ export default function QuizzesAdminPage() {
         await createQuiz(payload);
         toast.success("Quiz creado");
       }
-      setForm({ title: "", questionType: "multiple_choice", question: "", optionA: "", optionB: "", optionC: "", optionD: "", correctOption: "0", passingScore: "70", maxAttempts: "3", timeLimitMinutes: "" });
+      setForm(EMPTY_FORM);
       setEditingId(null);
       setShowForm(false);
       setQuizzes(await getQuizzes(courseId));
@@ -124,6 +142,11 @@ export default function QuizzesAdminPage() {
   }
 
   if (loading) return <p className="text-muted-foreground">Cargando...</p>;
+
+  const optionKeys: OptionFieldKey[] =
+    form.questionType === "multiple_choice"
+      ? ["optionA", "optionB", "optionC", "optionD"]
+      : ["optionA", "optionB"];
 
   return (
     <div className="space-y-6">
@@ -190,7 +213,7 @@ export default function QuizzesAdminPage() {
               ) : (
                 <>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    {(["optionA", "optionB", ...(form.questionType === "multiple_choice" ? ["optionC", "optionD"] : [])] as const).map((key, i) => (
+                    {optionKeys.map((key, i) => (
                       <div key={key} className="space-y-2">
                         <Label>Opción {String.fromCharCode(65 + i)}</Label>
                         <Input value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} required />

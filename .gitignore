@@ -42,3 +42,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local / reference
+/_design-ref
+build.log
+tmp_*.py

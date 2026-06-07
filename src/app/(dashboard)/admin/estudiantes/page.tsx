@@ -96,7 +96,7 @@ export default function EstudiantesAdminPage() {
               <Image src={s.photoURL} alt="" width={32} height={32} className="h-8 w-8 rounded-full object-cover" unoptimized />
             ) : (
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs text-white">
-                {s.displayName[0]}
+                {(s.displayName?.[0] ?? s.email?.[0] ?? "?").toUpperCase()}
               </div>
             ),
           },
