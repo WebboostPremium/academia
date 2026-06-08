@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminDb, getAdminApp } from "@/lib/firebase/admin";
-import { getStorage } from "firebase-admin/storage";
+import { getAdminDb } from "@/lib/firebase/admin";
 import { verifySessionToken, getSessionCookieName } from "@/lib/auth/session";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -17,9 +16,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
-  const bucket = getStorage(getAdminApp()).bucket();
-  const file = bucket.file(data.pdfUrl);
-  const [url] = await file.getSignedUrl({ action: "read", expires: Date.now() + 60 * 60 * 1000 });
+  const pdfUrl = data.pdfUrl as string;
+  const url = pdfUrl.startsWith("http") ? pdfUrl : null;
+  if (!url) {
+    return NextResponse.json({ error: "URL de certificado no disponible" }, { status: 404 });
+  }
 
   return NextResponse.json({ url, certificateNumber: data.certificateNumber });
 }

@@ -232,7 +232,15 @@ export async function getLesson(id: string): Promise<Lesson | null> {
 }
 
 export async function createLesson(data: Omit<Lesson, "id" | "createdAt" | "updatedAt">): Promise<string> {
-  const ref = await addDoc(fsCollection("lessons"), { ...data, content: data.content ?? { resources: [] }, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  const { quizId, ...rest } = data;
+  const payload: Record<string, unknown> = {
+    ...rest,
+    content: data.content ?? { resources: [] },
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+  if (quizId) payload.quizId = quizId;
+  const ref = await addDoc(fsCollection("lessons"), payload);
   const modSnap = await getDoc(fsDoc("modules", data.moduleId));
   if (modSnap.exists()) {
     const lessonOrder = [...(modSnap.data().lessonOrder ?? []), ref.id];

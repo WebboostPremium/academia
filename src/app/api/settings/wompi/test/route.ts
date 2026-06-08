@@ -3,8 +3,7 @@ import { getAdminDb } from "@/lib/firebase/admin";
 import { verifySessionToken, getSessionCookieName } from "@/lib/auth/session";
 import { ROLES } from "@/lib/constants/roles";
 import { FieldValue } from "firebase-admin/firestore";
-
-const WOMPI_API = process.env.WOMPI_API_URL ?? "https://api.wompi.sv/v1";
+import { testWompiConnection, getWompiClientId, getWompiClientSecret } from "@/lib/server/wompi";
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get(getSessionCookieName())?.value;
@@ -13,20 +12,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const wompiPrivateKey = process.env.WOMPI_PRIVATE_KEY;
-  if (!wompiPrivateKey) {
-    return NextResponse.json({ error: "WOMPI_PRIVATE_KEY no configurada en el servidor" }, { status: 503 });
+  if (!getWompiClientId() || !getWompiClientSecret()) {
+    return NextResponse.json(
+      { error: "WOMPI_CLIENT_ID y WOMPI_CLIENT_SECRET no configurados en el servidor" },
+      { status: 503 }
+    );
   }
 
   try {
-    const res = await fetch(`${WOMPI_API}/merchants/me`, {
-      headers: { Authorization: `Bearer ${wompiPrivateKey}` },
-    });
+    await testWompiConnection();
+    const status = "connected" as const;
 
-    const status = res.ok ? "connected" : "error";
     await getAdminDb().collection("settings").doc("global").set(
       {
         wompi: {
+          publicKey: getWompiClientId(),
           connectionStatus: status,
           lastVerifiedAt: FieldValue.serverTimestamp(),
         },
@@ -36,12 +36,8 @@ export async function POST(request: NextRequest) {
       { merge: true }
     );
 
-    if (!res.ok) {
-      return NextResponse.json({ error: "No se pudo conectar con Wompi", connectionStatus: status }, { status: 502 });
-    }
-
     return NextResponse.json({ success: true, connectionStatus: status });
-  } catch {
+  } catch (err) {
     await getAdminDb().collection("settings").doc("global").set(
       {
         wompi: { connectionStatus: "error", lastVerifiedAt: FieldValue.serverTimestamp() },
@@ -50,6 +46,7 @@ export async function POST(request: NextRequest) {
       },
       { merge: true }
     );
-    return NextResponse.json({ error: "Error al conectar con Wompi", connectionStatus: "error" }, { status: 502 });
+    const message = err instanceof Error ? err.message : "Error al conectar con Wompi";
+    return NextResponse.json({ error: message, connectionStatus: "error" }, { status: 502 });
   }
 }

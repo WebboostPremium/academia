@@ -315,12 +315,12 @@ export default function ConfiguracionPage() {
           <CardContent>
             <form onSubmit={handleSaveWompi} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="publicKey">Public Key</Label>
+                <Label htmlFor="publicKey">App ID (Client ID)</Label>
                 <Input
                   id="publicKey"
                   value={wompi.publicKey}
                   onChange={(e) => setWompi((p) => ({ ...p, publicKey: e.target.value }))}
-                  placeholder="pub_test_..."
+                  placeholder="c7e7b35b-f4c6-4158-aead-..."
                 />
               </div>
               <div className="space-y-2">
@@ -338,7 +338,8 @@ export default function ConfiguracionPage() {
                 </select>
               </div>
               <p className="text-xs text-muted-foreground">
-                La Private Key se configura en las variables de entorno del servidor (WOMPI_PRIVATE_KEY).
+                El API Secret se configura en el servidor como <code className="text-xs">WOMPI_CLIENT_SECRET</code>.
+                El webhook se registra automáticamente en cada enlace de pago.
               </p>
               {wompi.lastVerifiedAt && (
                 <p className="text-xs text-muted-foreground">

@@ -6,10 +6,51 @@ import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
+function parseWompiWebhook(payload: Record<string, unknown>) {
+  const svReference =
+    (payload.EnlacePago as { IdentificadorEnlaceComercio?: string } | undefined)
+      ?.IdentificadorEnlaceComercio ??
+    (payload.enlacePago as { identificadorEnlaceComercio?: string } | undefined)
+      ?.identificadorEnlaceComercio;
+
+  const svStatus = (payload.ResultadoTransaccion ?? payload.resultadoTransaccion) as string | undefined;
+  const svTransactionId = (payload.IdTransaccion ?? payload.idTransaccion) as string | undefined;
+
+  const legacy = payload.data as Record<string, unknown> | undefined;
+  const legacyTx = (legacy?.transaction ?? legacy ?? payload) as Record<string, unknown>;
+
+  const reference =
+    svReference ??
+    (legacyTx.reference as string | undefined) ??
+    (legacyTx.payment_link_id as string | undefined);
+
+  const status =
+    svStatus ??
+    ((legacyTx.status ?? legacyTx.payment_status ?? payload.status) as string | undefined);
+
+  const transactionId =
+    svTransactionId ??
+    ((legacyTx.id ?? legacyTx.transaction_id) as string | undefined) ??
+    "";
+
+  const approved =
+    status === "ExitosaAprobada" ||
+    status?.toUpperCase() === "APPROVED" ||
+    status?.toUpperCase() === "APPROVED_TRANSACTION" ||
+    status?.toUpperCase() === "COMPLETED";
+
+  const declined =
+    status?.toUpperCase() === "DECLINED" ||
+    status?.toUpperCase() === "VOIDED" ||
+    status === "Rechazada";
+
+  return { reference, transactionId, approved, declined };
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = request.headers.get("x-event-checksum") ?? request.headers.get("X-Event-Checksum");
-  const secret = process.env.WOMPI_WEBHOOK_SECRET ?? process.env.WOMPI_PRIVATE_KEY ?? "";
+  const secret = process.env.WOMPI_WEBHOOK_SECRET ?? process.env.WOMPI_CLIENT_SECRET ?? "";
 
   if (secret && signature) {
     const expected = crypto.createHmac("sha256", secret).update(body).digest("hex");
@@ -18,20 +59,17 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const payload = JSON.parse(body);
-  const event = payload.event ?? payload.type;
-  const transaction = payload.data?.transaction ?? payload.data ?? payload;
-
-  if (!transaction) return NextResponse.json({ received: true });
-
-  const reference = transaction.reference ?? transaction.payment_link_id;
-  const status = (transaction.status ?? transaction.payment_status ?? "").toUpperCase();
-  const transactionId = transaction.id ?? transaction.transaction_id ?? "";
+  const payload = JSON.parse(body) as Record<string, unknown>;
+  const { reference, transactionId, approved, declined } = parseWompiWebhook(payload);
 
   if (!reference) return NextResponse.json({ received: true });
 
   const db = getAdminDb();
-  const paymentsSnap = await db.collection("payments").where("wompi.reference", "==", reference).limit(1).get();
+  const paymentsSnap = await db
+    .collection("payments")
+    .where("wompi.reference", "==", reference)
+    .limit(1)
+    .get();
 
   if (paymentsSnap.empty) return NextResponse.json({ received: true });
 
@@ -40,12 +78,11 @@ export async function POST(request: NextRequest) {
 
   if (payment.status === "approved") return NextResponse.json({ received: true });
 
-  if (status === "APPROVED" || status === "APPROVED_TRANSACTION" || status === "COMPLETED") {
+  if (approved) {
     await paymentDoc.ref.update({
       status: "approved",
       approvedAt: FieldValue.serverTimestamp(),
       "wompi.transactionId": transactionId,
-      "wompi.paymentMethod": transaction.payment_method_type ?? transaction.payment_method,
     });
 
     const enrollmentId = `${payment.userId}_${payment.courseId}`;
@@ -56,33 +93,40 @@ export async function POST(request: NextRequest) {
       status: "active",
       enrolledAt: FieldValue.serverTimestamp(),
       progress: {
-        percentComplete: 0, modulesCompleted: [], lessonsCompleted: [],
-        quizzesPassed: [], finalExamPassed: false, averageScore: 0,
+        percentComplete: 0,
+        modulesCompleted: [],
+        lessonsCompleted: [],
+        quizzesPassed: [],
+        finalExamPassed: false,
+        averageScore: 0,
         lastActivityAt: FieldValue.serverTimestamp(),
       },
     });
 
     const courseDoc = await db.collection("courses").doc(payment.courseId).get();
     const sacrament = courseDoc.data()?.slug ?? "bautismo";
-    await db.collection("sacramental_records").doc(enrollmentId).set({
-      userId: payment.userId,
-      courseId: payment.courseId,
-      sacrament,
-      status: "in_progress",
-      requirements: [
-        { id: "docs", title: "Documentos entregados", completed: false },
-        { id: "bautismo", title: "Bautismo (si aplica)", completed: false },
-        { id: "asistencia", title: "Asistencia mínima", completed: false },
-      ],
-      observations: [],
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
+    await db.collection("sacramental_records").doc(enrollmentId).set(
+      {
+        userId: payment.userId,
+        courseId: payment.courseId,
+        sacrament,
+        status: "in_progress",
+        requirements: [
+          { id: "docs", title: "Documentos entregados", completed: false },
+          { id: "bautismo", title: "Bautismo (si aplica)", completed: false },
+          { id: "asistencia", title: "Asistencia mínima", completed: false },
+        ],
+        observations: [],
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
 
     await db.collection("notifications").add({
       userId: payment.userId,
       type: "payment",
       title: "Pago confirmado",
-      body: `Tu inscripción al curso ha sido activada.`,
+      body: "Tu inscripción al curso ha sido activada.",
       link: "/estudiante/cursos",
       read: false,
       createdAt: FieldValue.serverTimestamp(),
@@ -117,7 +161,7 @@ export async function POST(request: NextRequest) {
       details: `Pago aprobado: ${courseTitle}`,
       createdAt: FieldValue.serverTimestamp(),
     });
-  } else if (status === "DECLINED" || status === "VOIDED") {
+  } else if (declined) {
     await paymentDoc.ref.update({ status: "declined" });
   }
 

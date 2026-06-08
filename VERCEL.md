@@ -3,52 +3,52 @@
 ## 1. Conectar repositorio
 
 1. [vercel.com](https://vercel.com) → **Add New → Project**
-2. Importa `WebboostPremium/academia` (o `Catequesis-Online`)
+2. Importa `WebboostPremium/academia`
 3. Framework: **Next.js** (detectado automáticamente)
-4. Build: `npm run build` · Output: default
 
-## 2. Variables de entorno (Settings → Environment Variables)
+## 2. Variables de entorno
 
-Copia desde tu `.env.local` (marca **Production**, **Preview** y **Development**):
+| Variable | Requerida | Descripción |
+|----------|-----------|-------------|
+| `NEXT_PUBLIC_FIREBASE_*` (6 vars) | Sí | Firebase cliente |
+| `FIREBASE_CLIENT_EMAIL` | Sí | Firebase Admin |
+| `FIREBASE_PRIVATE_KEY` | Sí | Firebase Admin |
+| `SESSION_SECRET` | Sí | JWT de sesión |
+| `NEXT_PUBLIC_APP_URL` | Sí | URL pública (ej. `https://tu-dominio.vercel.app`) |
+| `CLOUDINARY_CLOUD_NAME` | Sí | Archivos (imágenes, PDFs, certificados) |
+| `CLOUDINARY_UPLOAD_PRESET` o `CLOUDINARY_API_KEY`+`SECRET` | Sí | Subida a Cloudinary |
+| `WOMPI_CLIENT_ID` | Sí | App ID de Wompi |
+| `WOMPI_CLIENT_SECRET` | Sí | API Secret de Wompi |
+| `RESEND_API_KEY` | Recomendado | Correos automáticos |
+| `EMAIL_FROM` | Recomendado | Remitente verificado en Resend |
+| `EMAIL_FROM_NAME` | Opcional | Nombre del remitente |
 
-> Si falta o está mal `NEXT_PUBLIC_FIREBASE_API_KEY`, el build falla con `auth/invalid-api-key`.
-
-| Variable | Requerida |
-|----------|-----------|
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | Sí |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Sí |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Sí |
-| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Sí |
-| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Sí |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | Sí |
-| `FIREBASE_CLIENT_EMAIL` | Sí |
-| `FIREBASE_PRIVATE_KEY` | Sí (pegar con `\n` o saltos de línea reales) |
-| `SESSION_SECRET` | Sí |
-| `NEXT_PUBLIC_APP_URL` | Sí → `https://tu-dominio.vercel.app` |
-| `NEXT_PUBLIC_WOMPI_PUBLIC_KEY` | Pagos |
-| `WOMPI_PUBLIC_KEY` | Pagos |
-| `WOMPI_PRIVATE_KEY` | Pagos |
-| `WOMPI_WEBHOOK_SECRET` | Pagos |
-| `CLOUDINARY_CLOUD_NAME` | Fotos (opcional) |
-| `CLOUDINARY_API_KEY` | Fotos (opcional) |
-| `CLOUDINARY_API_SECRET` | Fotos (opcional) |
-| `RESEND_API_KEY` | Correos (opcional) |
+> **No se usa Firebase Storage.** Solo Firestore + URLs de Cloudinary.
 
 ## 3. Firebase
 
-En Firebase Console → **Authentication → Settings → Authorized domains**, agrega:
+En Firebase Console → **Authentication → Authorized domains**, agrega tu dominio Vercel.
 
-- `tu-proyecto.vercel.app`
+## 4. Webhook Wompi
 
-## 4. Después del deploy
+URL del webhook (se envía automáticamente al crear cada enlace de pago):
 
-```bash
-# Datos iniciales (solo si ALLOW_SEED=true en Vercel)
-curl -X POST https://tu-dominio.vercel.app/api/seed
+```
+https://tu-dominio.vercel.app/api/payments/webhook
 ```
 
-**Primer admin:** regístrate en `/registro` → Firestore `users/{uid}` → `role: "admin"`.
+Flujo: Usuario compra → Enlace Wompi → Pago exitoso → Webhook → Inscripción automática.
 
-## 5. Webhook Wompi
+## 5. Cloudinary
 
-URL: `https://tu-dominio.vercel.app/api/payments/webhook`
+Preset recomendado: unsigned upload habilitado, carpetas `catequesis/*`.
+Tipos: imágenes (perfil, logos, portadas) y raw/PDF (tareas, certificados).
+
+## 6. Resend
+
+1. Verifica tu dominio en [resend.com](https://resend.com)
+2. Actualiza `EMAIL_FROM` con un correo de ese dominio
+
+## 7. Primer admin
+
+Regístrate en `/registro` → Firestore `users/{uid}` → `role: "admin"`.
