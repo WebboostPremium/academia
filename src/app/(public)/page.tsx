@@ -301,11 +301,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* FAQ */}
+      {/* Preguntas y respuestas */}
       <section id="faq" className="bg-secondary/30 py-16 md:py-20">
         <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
           <h2 className="text-center font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
-            Preguntas frecuentes
+            Preguntas y respuestas
           </h2>
           <div className="mt-8 space-y-3">
             {FAQ_ITEMS.map((item, i) => (

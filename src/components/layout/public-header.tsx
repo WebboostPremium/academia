@@ -9,7 +9,7 @@ const NAV = [
   { label: "Cursos", href: "/#cursos" },
   { label: "Cómo funciona", href: "/#como-funciona" },
   { label: "Testimonios", href: "/#testimonios" },
-  { label: "FAQ", href: "/#faq" },
+  { label: "Preguntas y respuestas", href: "/#faq" },
 ];
 
 export function PublicHeader() {
