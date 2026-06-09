@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-const LOGO_SRC = "/brand/logo-catequi-online.png";
+const LOGO_SRC = "/brand/logo-catequesis-online.jpg";
 
 interface LogoProps {
   variant?: "light" | "dark";
@@ -17,25 +17,23 @@ export function Logo({
   size = "md",
   href = "/",
   className,
-  showText = true,
 }: LogoProps) {
-  const heights = { sm: 44, md: 56, lg: 72 };
-  const widths = { sm: 120, md: 150, lg: 190 };
+  const sizes = { sm: 48, md: 60, lg: 80 };
 
   const content = (
     <span className={cn("inline-flex items-center", className)}>
       <Image
         src={LOGO_SRC}
-        alt="catequi online — formación católica"
-        width={showText ? widths[size] : heights[size]}
-        height={heights[size]}
+        alt="Catequesis Online — Ministerio de Catequesis, Catedral San Miguel"
+        width={sizes[size]}
+        height={sizes[size]}
         className="h-auto w-auto object-contain"
-        style={{ maxHeight: heights[size], width: "auto" }}
+        style={{ maxHeight: sizes[size], width: "auto" }}
         priority
       />
     </span>
   );
 
-  if (href) return <Link href={href} aria-label="Inicio catequi online">{content}</Link>;
+  if (href) return <Link href={href} aria-label="Inicio Catequesis Online">{content}</Link>;
   return content;
 }
