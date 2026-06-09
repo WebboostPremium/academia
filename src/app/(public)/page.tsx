@@ -91,7 +91,7 @@ export default function HomePage() {
       <section className="relative min-h-[88vh] overflow-hidden">
         <Image
           src={DESIGN_IMAGES.hero}
-          alt="Vitral de iglesia católica con luz dorada"
+          alt="Interior de iglesia católica"
           fill
           className="object-cover"
           priority
@@ -137,7 +137,7 @@ export default function HomePage() {
             <div className="overflow-hidden rounded-2xl border border-border/60 shadow-2xl ring-1 ring-accent/20">
               <Image
                 src={DESIGN_IMAGES.eucharist}
-                alt="Velas encendidas en el altar de una iglesia católica"
+                alt="Preparación eucarística en la parroquia"
                 width={640}
                 height={480}
                 className="h-full w-full object-cover"
@@ -156,7 +156,7 @@ export default function HomePage() {
           <div className="relative aspect-[4/3] overflow-hidden rounded-2xl shadow-lg">
             <Image
               src={DESIGN_IMAGES.mission}
-              alt="Interior de catedral católica"
+              alt="Formación en la tradición de la Iglesia Católica"
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 50vw"
