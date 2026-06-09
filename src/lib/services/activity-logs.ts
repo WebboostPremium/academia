@@ -33,6 +33,10 @@ export async function getActivityLogs(max = 100): Promise<ActivityLog[]> {
 }
 
 export async function getActivityLogsByUser(userId: string, max = 50): Promise<ActivityLog[]> {
-  const all = await getActivityLogs(200);
-  return all.filter((l) => l.userId === userId).slice(0, max);
+  try {
+    const all = await getActivityLogs(200);
+    return all.filter((l) => l.userId === userId).slice(0, max);
+  } catch {
+    return [];
+  }
 }

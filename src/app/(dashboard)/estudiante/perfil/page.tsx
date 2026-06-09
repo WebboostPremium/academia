@@ -9,7 +9,7 @@ import { updateUser } from "@/lib/services/users";
 import { getUserEnrollments } from "@/lib/services/enrollments";
 import { getCertificates } from "@/lib/services/certificates";
 import { getActivityLogsByUser } from "@/lib/services/activity-logs";
-import { getCourses } from "@/lib/services/courses";
+import { getCourse } from "@/lib/services/courses";
 import { ProfilePhotoUpload } from "@/components/profile/profile-photo-upload";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,13 +40,20 @@ export default function EstudiantePerfilPage() {
       getUserEnrollments(user.uid),
       getCertificates({ userId: user.uid }),
       getActivityLogsByUser(user.uid, 10),
-      getCourses(),
-    ]).then(([enr, certs, logs, courses]) => {
-      setEnrollments(enr);
-      setCertCount(certs.length);
-      setActivity(logs);
-      setCourseTitles(Object.fromEntries(courses.map((c) => [c.id, c.title])));
-    });
+    ])
+      .then(async ([enr, certs, logs]) => {
+        setEnrollments(enr);
+        setCertCount(certs.length);
+        setActivity(logs);
+        const titles = await Promise.all(
+          enr.map(async (e) => {
+            const course = await getCourse(e.courseId);
+            return course ? ([course.id, course.title] as const) : null;
+          })
+        );
+        setCourseTitles(Object.fromEntries(titles.filter(Boolean) as Array<readonly [string, string]>));
+      })
+      .catch(() => toast.error("Error al cargar el perfil"));
   }, [user]);
 
   if (!user) return null;

@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { getLiveClasses } from "@/lib/services/live-classes";
 import { getAssignments } from "@/lib/services/assignments";
 import { getUserEnrollments } from "@/lib/services/enrollments";
-import { getCourses } from "@/lib/services/courses";
+import { getCourse } from "@/lib/services/courses";
 
 export default function EstudianteCalendarioPage() {
   const { user } = useAuth();
@@ -18,14 +18,19 @@ export default function EstudianteCalendarioPage() {
   useEffect(() => {
     if (!user) return;
     async function load() {
-      const [classes, assignments, enrollments, courses] = await Promise.all([
+      const [classes, assignments, enrollments] = await Promise.all([
         getLiveClasses(),
         getAssignments(),
         getUserEnrollments(user!.uid),
-        getCourses(),
       ]);
       const enrolledIds = new Set(enrollments.map((e) => e.courseId));
-      const courseMap = new Map(courses.map((c) => [c.id, c.title]));
+      const courseEntries = await Promise.all(
+        enrollments.map(async (e) => {
+          const course = await getCourse(e.courseId);
+          return course ? ([course.id, course.title] as const) : null;
+        })
+      );
+      const courseMap = new Map(courseEntries.filter(Boolean) as Array<readonly [string, string]>);
 
       const classEvents = classes
         .filter((c) => enrolledIds.has(c.courseId))

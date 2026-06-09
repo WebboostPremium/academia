@@ -24,35 +24,47 @@ export default function CatequistaDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
-    async function load() {
-      const students = await getStudentsByCatequista(user!.uid);
-      const studentIds = new Set(students.map((s) => s.uid));
-      const submissions = (await getSubmissions({ status: "pending" })).filter((s) => studentIds.has(s.userId));
-      const classes = await getUpcomingClasses();
-      const courses = await getPublishedCourses();
-      const questions = (await Promise.all(courses.map((c) => getQuestions(c.id)))).flat().filter((q) => q.status === "open");
-
-      setStats({ students: students.length, tasks: submissions.length, classes: classes.length, questions: questions.length });
-
-      const studentData = await Promise.all(students.slice(0, 5).map(async (s) => {
-        const enrollments = await getUserEnrollments(s.uid);
-        const active = enrollments.find((e) => e.status === "active");
-        const course = active ? courses.find((c) => c.id === active.courseId) : null;
-        return {
-          name: s.displayName,
-          course: course?.title ?? "Sin curso",
-          progress: active?.progress.percentComplete ?? 0,
-          avatar: s.displayName.split(" ").map((n) => n[0]).join("").slice(0, 2),
-        };
-      }));
-      setRecentStudents(studentData);
-      setActivities(submissions.slice(0, 4).map((s) => `Nueva entrega de tarea pendiente de revisión`));
-      if (classes[0]) {
-        setNextClass({ title: classes[0].title, date: formatDateTime(classes[0].scheduledAt),
-          url: classes[0].meetingUrl, platform: classes[0].platform === "zoom" ? "Zoom" : "Google Meet" });
-      }
+    if (!user) {
       setLoading(false);
+      return;
+    }
+    async function load() {
+      try {
+        const students = await getStudentsByCatequista(user!.uid);
+        const studentIds = new Set(students.map((s) => s.uid));
+        const submissions = (await getSubmissions({ status: "pending" })).filter((s) => studentIds.has(s.userId));
+        const classes = await getUpcomingClasses();
+        const courses = await getPublishedCourses();
+        const questions = (await Promise.all(courses.map((c) => getQuestions(c.id)))).flat().filter((q) => q.status === "open");
+
+        setStats({ students: students.length, tasks: submissions.length, classes: classes.length, questions: questions.length });
+
+        const studentData = await Promise.all(students.slice(0, 5).map(async (s) => {
+          const enrollments = await getUserEnrollments(s.uid);
+          const active = enrollments.find((e) => e.status === "active");
+          const course = active ? courses.find((c) => c.id === active.courseId) : null;
+          return {
+            name: s.displayName,
+            course: course?.title ?? "Sin curso",
+            progress: active?.progress.percentComplete ?? 0,
+            avatar: s.displayName.split(" ").map((n) => n[0]).join("").slice(0, 2),
+          };
+        }));
+        setRecentStudents(studentData);
+        setActivities(submissions.slice(0, 4).map(() => "Nueva entrega de tarea pendiente de revisión"));
+        if (classes[0]) {
+          setNextClass({
+            title: classes[0].title,
+            date: formatDateTime(classes[0].scheduledAt),
+            url: classes[0].meetingUrl,
+            platform: classes[0].platform === "zoom" ? "Zoom" : "Google Meet",
+          });
+        }
+      } catch {
+        /* dashboard parcial vacío */
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, [user]);

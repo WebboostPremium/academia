@@ -29,26 +29,35 @@ export default function ForoAdminPage() {
   const selectClass =
     "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+  async function loadAllQuestions(courseList: Course[]) {
+    const qs = await Promise.all(courseList.map((c) => getQuestions(c.id)));
+    return qs.flat().sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
   useEffect(() => {
-    getCourses().then(async (data) => {
-      setCourses(data);
-      if (data.length > 0) {
-        const qs = await Promise.all(data.map((c) => getQuestions(c.id)));
-        setQuestions(qs.flat().sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
-      }
-      setLoading(false);
-    });
+    getCourses()
+      .then(async (data) => {
+        setCourses(data);
+        if (data.length > 0) setQuestions(await loadAllQuestions(data));
+      })
+      .catch(() => toast.error("Error al cargar el foro"))
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     if (!courseId || loading) return;
-    if (courseId === "all") {
-      Promise.all(courses.map((c) => getQuestions(c.id))).then((qs) =>
-        setQuestions(qs.flat().sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()))
-      );
-    } else {
-      getQuestions(courseId).then(setQuestions);
+    async function refreshFiltered() {
+      try {
+        if (courseId === "all") {
+          setQuestions(await loadAllQuestions(courses));
+        } else {
+          setQuestions(await getQuestions(courseId));
+        }
+      } catch {
+        toast.error("Error al filtrar preguntas");
+      }
     }
+    refreshFiltered();
   }, [courseId, courses, loading]);
 
   async function handleHide(id: string) {
@@ -72,13 +81,15 @@ export default function ForoAdminPage() {
     }
   }
 
-  function refresh() {
-    if (courseId === "all") {
-      Promise.all(courses.map((c) => getQuestions(c.id))).then((qs) =>
-        setQuestions(qs.flat().sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()))
-      );
-    } else if (courseId) {
-      getQuestions(courseId).then(setQuestions);
+  async function refresh() {
+    try {
+      if (courseId === "all") {
+        setQuestions(await loadAllQuestions(courses));
+      } else if (courseId) {
+        setQuestions(await getQuestions(courseId));
+      }
+    } catch {
+      toast.error("Error al actualizar el foro");
     }
   }
 

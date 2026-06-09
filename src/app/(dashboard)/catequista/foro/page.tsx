@@ -27,26 +27,34 @@ export default function ForoPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    getPublishedCourses().then((c) => {
-      setCourses(c);
-      if (c.length > 0) setCourseId(c[0].id);
-      setLoading(false);
-    });
+    getPublishedCourses()
+      .then((c) => {
+        setCourses(c);
+        if (c.length > 0) setCourseId(c[0].id);
+      })
+      .catch(() => toast.error("Error al cargar cursos"))
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     if (!courseId) return;
-    getQuestions(courseId).then(async (qs) => {
-      const open = qs.filter((q) => q.status === "open" || q.status === "answered");
-      setQuestions(open);
-      const answerMap: Record<string, ForumAnswer[]> = {};
-      await Promise.all(
-        open.map(async (q) => {
-          answerMap[q.id] = await getAnswers(q.id);
-        })
-      );
-      setAnswers(answerMap);
-    });
+    async function loadForum() {
+      try {
+        const qs = await getQuestions(courseId);
+        const open = qs.filter((q) => q.status === "open" || q.status === "answered");
+        setQuestions(open);
+        const answerMap: Record<string, ForumAnswer[]> = {};
+        await Promise.all(
+          open.map(async (q) => {
+            answerMap[q.id] = await getAnswers(q.id);
+          })
+        );
+        setAnswers(answerMap);
+      } catch {
+        toast.error("Error al cargar el foro");
+      }
+    }
+    loadForum();
   }, [courseId]);
 
   async function handleReply(e: React.FormEvent) {
