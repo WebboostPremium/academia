@@ -5,17 +5,16 @@ import Link from "next/link";
 import Image from "next/image";
 import { BookOpen, Clock, User, CheckCircle2, PlayCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { getCourseBySlug, getModules, getLessons } from "@/lib/services/courses";
 import { WompiCheckout } from "@/components/payments/wompi-checkout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DEFAULT_COURSE_META } from "@/lib/constants/public-content";
 import { formatCurrency } from "@/lib/utils/format";
-import type { Course, Module, Lesson } from "@/types/course";
+import type { Course, CourseSlug, Module, Lesson } from "@/types/course";
 
 export function CourseEnrollment({ slug }: { slug: string }) {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const [course, setCourse] = useState<Course | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -23,25 +22,60 @@ export function CourseEnrollment({ slug }: { slug: string }) {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    getCourseBySlug(slug).then(async (c) => {
-      if (!c || c.status !== "published") {
+    async function load() {
+      try {
+        const res = await fetch(`/api/public/courses/${slug}`);
+        if (res.status === 404) {
+          setNotFound(true);
+          return;
+        }
+        if (!res.ok) throw new Error("Error al cargar");
+        const data = await res.json();
+        setCourse({
+          ...data.course,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as Course);
+        setModules(
+          (data.modules as Array<Record<string, unknown>>).map((m) => ({
+            id: m.id as string,
+            courseId: m.courseId as string,
+            title: m.title as string,
+            description: (m.description as string) ?? "",
+            order: (m.order as number) ?? 0,
+            lessonOrder: (m.lessonOrder as string[]) ?? [],
+            status: (m.status as Module["status"]) ?? "published",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }))
+        );
+        setLessons(
+          (data.lessons as Array<Record<string, unknown>>).map((l) => ({
+            id: l.id as string,
+            courseId: l.courseId as string,
+            moduleId: l.moduleId as string,
+            title: l.title as string,
+            description: l.description as string | undefined,
+            order: (l.order as number) ?? 0,
+            content: (l.content as Lesson["content"]) ?? { resources: [] },
+            quizId: l.quizId as string | undefined,
+            estimatedMinutes: (l.estimatedMinutes as number) ?? 0,
+            status: (l.status as Lesson["status"]) ?? "published",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }))
+        );
+      } catch {
         setNotFound(true);
+      } finally {
         setLoading(false);
-        return;
       }
-      setCourse(c);
-      const [mods, less] = await Promise.all([
-        getModules(c.id).catch(() => []),
-        getLessons(c.id).catch(() => []),
-      ]);
-      setModules(mods);
-      setLessons(less);
-      setLoading(false);
-    });
+    }
+    load();
   }, [slug]);
 
-  if (loading || authLoading) {
-    return <p className="text-muted-foreground">Cargando programa...</p>;
+  if (loading) {
+    return <p className="py-20 text-center text-muted-foreground">Cargando programa...</p>;
   }
 
   if (notFound || !course) {
@@ -53,7 +87,7 @@ export function CourseEnrollment({ slug }: { slug: string }) {
     );
   }
 
-  const meta = DEFAULT_COURSE_META[course.slug];
+  const meta = DEFAULT_COURSE_META[course.slug as CourseSlug];
   const image = course.imageUrl || meta?.image;
   const objectives = course.objectives?.length ? course.objectives : meta?.objectives ?? [];
   const duration = course.durationLabel || meta?.duration || "Flexible";
@@ -63,7 +97,6 @@ export function CourseEnrollment({ slug }: { slug: string }) {
     <div className="mx-auto max-w-7xl px-4 py-10 lg:px-8">
       <div className="grid gap-10 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-8">
-          {/* Hero imagen */}
           <div className="relative h-64 overflow-hidden rounded-3xl md:h-80">
             <Image src={image} alt={course.title} fill className="object-cover" unoptimized />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -73,13 +106,11 @@ export function CourseEnrollment({ slug }: { slug: string }) {
             </div>
           </div>
 
-          {/* Descripción */}
           <section>
             <h2 className="text-xl font-bold">Descripción</h2>
-            <p className="mt-3 text-muted-foreground leading-relaxed">{course.description}</p>
+            <p className="mt-3 leading-relaxed text-muted-foreground">{course.description}</p>
           </section>
 
-          {/* Objetivos */}
           {objectives.length > 0 && (
             <section>
               <h2 className="text-xl font-bold">Objetivos del programa</h2>
@@ -94,7 +125,6 @@ export function CourseEnrollment({ slug }: { slug: string }) {
             </section>
           )}
 
-          {/* Temario */}
           <section>
             <h2 className="text-xl font-bold">Temario</h2>
             {modules.length === 0 ? (
@@ -106,7 +136,7 @@ export function CourseEnrollment({ slug }: { slug: string }) {
                   return (
                     <Card key={mod.id} className="rounded-xl">
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-base flex items-center gap-2">
+                        <CardTitle className="flex items-center gap-2 text-base">
                           <BookOpen className="h-4 w-4 text-primary" />
                           {mod.title}
                         </CardTitle>
@@ -131,7 +161,6 @@ export function CourseEnrollment({ slug }: { slug: string }) {
             )}
           </section>
 
-          {/* Instructor */}
           {course.instructor && (
             <section>
               <h2 className="text-xl font-bold">Instructor</h2>
@@ -148,9 +177,8 @@ export function CourseEnrollment({ slug }: { slug: string }) {
           )}
         </div>
 
-        {/* Sidebar compra */}
         <div>
-          <Card className="sticky top-24 card-shadow rounded-2xl">
+          <Card className="card-shadow sticky top-24 rounded-2xl">
             <CardHeader>
               <CardTitle>Inscríbete ahora</CardTitle>
             </CardHeader>
