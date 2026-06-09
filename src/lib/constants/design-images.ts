@@ -9,7 +9,7 @@ export const DESIGN_IMAGES = {
   /** Vitral e interior de iglesia — login / registro */
   login: `${CLOUDINARY}/v1781042863/406590672630251482_ortkzy.jpg`,
   /** Cruz y Biblia — símbolos de la fe católica */
-  faith: `${CLOUDINARY}/v1781043064/27162403996581161_qiip75.webp`,
+  faith: `${CLOUDINARY}/v1781043844/descarga_cbetg6.webp`,
   /** Formación en la tradición de la Iglesia */
   mission: `${CLOUDINARY}/v1781042863/406590672630251482_ortkzy.jpg`,
   /** Eucaristía — Lc 22:19 */
