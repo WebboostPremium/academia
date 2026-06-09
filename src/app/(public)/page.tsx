@@ -88,31 +88,42 @@ export default function HomePage() {
   return (
     <main className="flex-1">
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 md:grid-cols-2 md:py-24">
+      <section className="relative min-h-[88vh] overflow-hidden">
+        <Image
+          src={DESIGN_IMAGES.hero}
+          alt="Vitral de iglesia católica con luz dorada"
+          fill
+          className="object-cover"
+          priority
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/85 to-background/50" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
+
+        <div className="relative mx-auto grid w-full max-w-6xl items-center gap-10 px-4 py-20 sm:px-6 md:grid-cols-2 md:py-28">
           <div className="flex flex-col items-start gap-6">
-            <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
+            <span className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-medium text-primary">
               <Heart className="size-3.5 text-accent" />
-              Formación católica en línea
+              Academia católica de nuestra parroquia
             </span>
-            <h1 className="text-balance font-serif text-4xl font-semibold leading-tight tracking-tight text-foreground sm:text-5xl">
+            <h1 className="text-balance font-serif text-4xl font-semibold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl">
               Camina en la fe, a tu ritmo y acompañado
             </h1>
             <p className="text-pretty text-lg leading-relaxed text-muted-foreground">
-              Prepara los sacramentos de Bautismo, Primera Comunión y Confirmación con clases,
-              materiales y catequistas que te guían en cada paso.
+              Prepara los sacramentos de Bautismo, Primera Comunión y Confirmación con la guía
+              de catequistas de la Iglesia Católica, desde cualquier lugar.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <Button size="lg" asChild>
                 <Link href="/registro">Comenzar ahora</Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <Link href="#cursos">Ver cursos</Link>
+                <Link href="#cursos">Ver sacramentos</Link>
               </Button>
             </div>
-            <div className="flex items-center gap-6 pt-2 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-6 pt-2 text-sm text-muted-foreground">
               <span>
-                <strong className="text-foreground">+{stats.students || 140}</strong> estudiantes
+                <strong className="text-foreground">+{stats.students || 140}</strong> familias formadas
               </span>
               <span>
                 <strong className="text-foreground">{stats.programs}</strong> sacramentos
@@ -122,17 +133,59 @@ export default function HomePage() {
               </span>
             </div>
           </div>
-          <div className="relative">
-            <div className="overflow-hidden rounded-2xl border border-border shadow-lg">
+          <div className="relative hidden md:block">
+            <div className="overflow-hidden rounded-2xl border border-border/60 shadow-2xl ring-1 ring-accent/20">
               <Image
-                src={DESIGN_IMAGES.hero}
-                alt="Biblia abierta y vela junto a un vitral de capilla"
-                width={720}
-                height={560}
+                src={DESIGN_IMAGES.eucharist}
+                alt="Velas encendidas en el altar de una iglesia católica"
+                width={640}
+                height={480}
                 className="h-full w-full object-cover"
-                priority
               />
             </div>
+            <p className="mt-4 text-center font-serif text-sm italic text-muted-foreground">
+              &ldquo;Esto es mi Cuerpo, que será entregado por vosotros&rdquo; — Lc 22:19
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Misión */}
+      <section className="border-y border-border bg-secondary/40 py-16 md:py-20">
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 sm:px-6 md:grid-cols-2">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-2xl shadow-lg">
+            <Image
+              src={DESIGN_IMAGES.mission}
+              alt="Interior de catedral católica"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
+            />
+          </div>
+          <div className="space-y-4">
+            <h2 className="font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
+              Formación en la tradición de la Iglesia
+            </h2>
+            <p className="leading-relaxed text-muted-foreground">
+              Catequi Online es la plataforma de catequesis de nuestra comunidad parroquial.
+              Acompañamos a familias y jóvenes en la preparación de los sacramentos con contenido
+              fiel a la doctrina católica, materiales litúrgicos y el seguimiento de catequistas
+              comprometidos con la misión evangelizadora.
+            </p>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-accent" />
+                Catequesis sacramental: Bautismo, Primera Comunión y Confirmación
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-accent" />
+                Oraciones, liturgia y vida de fe integradas al programa
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-accent" />
+                Acompañamiento personal de catequistas de la parroquia
+              </li>
+            </ul>
           </div>
         </div>
       </section>
@@ -280,18 +333,24 @@ export default function HomePage() {
       </section>
 
       {/* Testimonios */}
-      <section id="testimonios" className="py-16 md:py-24">
+      <section id="testimonios" className="relative py-16 md:py-24">
+        <div className="absolute inset-0 -z-10 opacity-[0.07]">
+          <Image src={DESIGN_IMAGES.faith} alt="" fill className="object-cover" aria-hidden />
+        </div>
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-balance font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
-              Historias de fe
+              Historias de fe en nuestra comunidad
             </h2>
+            <p className="mt-3 text-muted-foreground">
+              Familias que han vivido su preparación sacramental con nosotros
+            </p>
           </div>
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             {TESTIMONIALS.map((t) => (
-              <Card key={t.name} className="flex flex-col gap-4 p-6">
+              <Card key={t.name} className="flex flex-col gap-4 border-accent/20 p-6 shadow-sm">
                 <p className="text-pretty leading-relaxed text-foreground">&ldquo;{t.text}&rdquo;</p>
-                <div className="mt-auto">
+                <div className="mt-auto border-t border-border pt-4">
                   <p className="font-medium">{t.name}</p>
                   <p className="text-sm text-muted-foreground">{t.course}</p>
                 </div>

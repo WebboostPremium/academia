@@ -13,7 +13,9 @@ import { ROLE_LABELS } from "@/lib/constants/roles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DESIGN_IMAGES } from "@/lib/constants/design-images";
 
 export function LoginForm() {
   const router = useRouter();
@@ -76,10 +78,23 @@ export function LoginForm() {
   const blocked = searchParams.get("error") === "blocked";
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full max-w-md overflow-hidden border-accent/20 shadow-lg">
+      <div className="relative h-32 w-full lg:hidden">
+        <Image
+          src={DESIGN_IMAGES.login}
+          alt="Iglesia católica"
+          fill
+          className="object-cover"
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-primary/50" />
+        <p className="absolute bottom-3 left-4 font-serif text-sm italic text-primary-foreground">
+          Bienvenido a catequi online
+        </p>
+      </div>
       <CardHeader>
         <CardTitle>Iniciar sesión</CardTitle>
-        <CardDescription>Accede a tu cuenta de Catequesis Online</CardDescription>
+        <CardDescription>Accede a tu cuenta de catequi online</CardDescription>
       </CardHeader>
       <CardContent>
         {blocked && (

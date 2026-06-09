@@ -24,7 +24,7 @@ export function PublicFooter() {
           <div className="space-y-3 text-center sm:text-left">
             <Logo variant="dark" size="sm" />
             <p className="max-w-xs text-sm text-muted-foreground">
-              Formación católica en línea para Bautismo, Primera Comunión y Confirmación.
+              Catequesis sacramental de la Iglesia Católica: Bautismo, Primera Comunión y Confirmación.
             </p>
             <div className="flex flex-wrap justify-center gap-3 sm:justify-start">
               {social.facebook && (

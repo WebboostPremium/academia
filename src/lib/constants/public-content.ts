@@ -42,7 +42,7 @@ export const DEFAULT_COURSE_META: Record<CourseSlug, {
   instructorBio: string;
 }> = {
   bautismo: {
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=900&h=500&fit=crop",
+    image: "https://images.unsplash.com/photo-1507692049790-aeea99e00404?w=900&h=500&fit=crop&q=80",
     duration: "4 semanas",
     durationWeeks: 4,
     objectives: [
@@ -54,7 +54,7 @@ export const DEFAULT_COURSE_META: Record<CourseSlug, {
     instructorBio: "Sacerdote y catequista con experiencia en preparación sacramental familiar.",
   },
   "primera-comunion": {
-    image: "https://images.unsplash.com/photo-1519494026892-80bbd9d6ecb6?w=900&h=500&fit=crop",
+    image: "https://images.unsplash.com/photo-1519494026892-80bbd9d6ecb6?w=900&h=500&fit=crop&q=80",
     duration: "8 semanas",
     durationWeeks: 8,
     objectives: [
@@ -66,7 +66,7 @@ export const DEFAULT_COURSE_META: Record<CourseSlug, {
     instructorBio: "Catequista certificada especializada en formación eucarística infantil y juvenil.",
   },
   confirmacion: {
-    image: "https://images.unsplash.com/photo-1438232992991-995b9458d3c0?w=900&h=500&fit=crop",
+    image: "https://images.unsplash.com/photo-1548625144-eacae468d7ca?w=900&h=500&fit=crop&q=80",
     duration: "10 semanas",
     durationWeeks: 10,
     objectives: [
