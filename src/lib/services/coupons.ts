@@ -1,4 +1,4 @@
-import { getDocs, addDoc, updateDoc, query, where, serverTimestamp, getDoc, increment } from "firebase/firestore";
+import { getDocs, addDoc, updateDoc, deleteDoc, query, where, serverTimestamp, getDoc, increment } from "firebase/firestore";
 import { fsCollection, fsDoc } from "@/lib/firebase/firestore-helpers";
 import { toDate } from "@/lib/firebase/converters";
 import type { Coupon } from "@/types/coupon";
@@ -34,14 +34,26 @@ export async function getCouponByCode(code: string): Promise<Coupon | null> {
 }
 
 export async function createCoupon(data: Omit<Coupon, "id" | "createdAt" | "updatedAt" | "usedCount">): Promise<string> {
-  const ref = await addDoc(fsCollection("coupons"), {
-    ...data,
+  const payload: Record<string, unknown> = {
     code: data.code.trim().toUpperCase(),
+    type: data.type,
+    value: data.value,
     usedCount: 0,
+    status: data.status,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-  });
+  };
+  if (data.courseId) payload.courseId = data.courseId;
+  if (data.maxUses) payload.maxUses = data.maxUses;
+  if (data.minAmount) payload.minAmount = data.minAmount;
+  if (data.expiresAt) payload.expiresAt = data.expiresAt;
+
+  const ref = await addDoc(fsCollection("coupons"), payload);
   return ref.id;
+}
+
+export async function deleteCoupon(id: string): Promise<void> {
+  await deleteDoc(fsDoc("coupons", id));
 }
 
 export async function updateCoupon(id: string, data: Partial<Coupon>): Promise<void> {

@@ -32,14 +32,19 @@ export interface AppSettings {
   wompi: WompiSettings;
   certificates: {
     headerTitle?: string;
+    subtitle?: string;
     titleText?: string;
     bodyText?: string;
     borderColor?: string;
+    backgroundImageUrl?: string;
+    fontFamily?: string;
     showLogo?: boolean;
     signatureUrl?: string;
     signatureName?: string;
     signatureTitle?: string;
     templateFooter?: string;
+    templates?: import("./certificate-template").CertificateTemplate[];
+    activeTemplateId?: string;
   };
   email: {
     fromName: string;

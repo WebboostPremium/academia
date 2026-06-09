@@ -17,10 +17,15 @@ export function CertificatePreview({
 }: CertificatePreviewProps) {
   const borderColor = certificates.borderColor ?? "#2d4a7a";
 
+  const fontFamily = certificates.fontFamily ?? "Georgia, serif";
+  const bgStyle = certificates.backgroundImageUrl
+    ? { backgroundImage: `url(${certificates.backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+    : {};
+
   return (
     <div
       className="mx-auto aspect-[1.414/1] w-full max-w-md rounded-lg bg-white p-8 shadow-lg ring-1 ring-foreground/10"
-      style={{ border: `4px double ${borderColor}` }}
+      style={{ border: `4px double ${borderColor}`, fontFamily, ...bgStyle }}
     >
       {institution.logoUrl && (
         // eslint-disable-next-line @next/next/no-img-element
@@ -29,6 +34,9 @@ export function CertificatePreview({
       <p className="text-center text-xs uppercase tracking-widest text-muted-foreground">
         {certificates.headerTitle ?? institution.name}
       </p>
+      {certificates.subtitle && (
+        <p className="mt-2 text-center text-sm text-muted-foreground">{certificates.subtitle}</p>
+      )}
       <h3 className="mt-4 text-center font-serif text-xl font-semibold" style={{ color: borderColor }}>
         {certificates.titleText ?? "Certificado de Participación"}
       </h3>

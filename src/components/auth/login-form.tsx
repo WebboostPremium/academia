@@ -3,10 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { getClientAuth } from "@/lib/firebase/client";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 import { getRoleHomePath } from "@/lib/constants/routes";
+import { canAccessRoute } from "@/lib/auth/permissions";
+import { ROLE_LABELS } from "@/lib/constants/roles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,10 +21,12 @@ export function LoginForm() {
   const [form, setForm] = useState<LoginInput>({ email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setStatusMessage(null);
 
     const parsed = loginSchema.safeParse(form);
     if (!parsed.success) {
@@ -30,9 +35,11 @@ export function LoginForm() {
     }
 
     setLoading(true);
+    setStatusMessage("Verificando credenciales...");
     try {
       const credential = await signInWithEmailAndPassword(getClientAuth(), form.email, form.password);
-      const idToken = await credential.user.getIdToken();
+      setStatusMessage("Obteniendo tu perfil...");
+      const idToken = await credential.user.getIdToken(true);
       const sessionRes = await fetch("/api/auth/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -45,15 +52,28 @@ export function LoginForm() {
       }
 
       const { user } = await sessionRes.json();
-      const redirect = searchParams.get("redirect") ?? getRoleHomePath(user.role);
+      const home = getRoleHomePath(user.role);
+      const redirectParam = searchParams.get("redirect");
+      const redirect =
+        redirectParam && canAccessRoute(user.role, redirectParam) ? redirectParam : home;
+
+      setStatusMessage(`Redirigiendo al panel de ${ROLE_LABELS[user.role as keyof typeof ROLE_LABELS] ?? user.role}...`);
       router.push(redirect);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Credenciales incorrectas");
+      const msg = err instanceof Error ? err.message : "Credenciales incorrectas";
+      if (msg.includes("invalid-credential") || msg.includes("wrong-password") || msg.includes("user-not-found")) {
+        setError("Correo o contraseña incorrectos. Verifica tus datos o recupera tu contraseña.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
+      setStatusMessage(null);
     }
   }
+
+  const blocked = searchParams.get("error") === "blocked";
 
   return (
     <Card className="w-full max-w-md">
@@ -62,15 +82,22 @@ export function LoginForm() {
         <CardDescription>Accede a tu cuenta de Catequesis Online</CardDescription>
       </CardHeader>
       <CardContent>
+        {blocked && (
+          <p className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            Tu cuenta está bloqueada. Contacta al administrador.
+          </p>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Correo electrónico</Label>
             <Input
               id="email"
               type="email"
+              autoComplete="email"
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               required
+              disabled={loading}
             />
           </div>
           <div className="space-y-2">
@@ -78,13 +105,22 @@ export function LoginForm() {
             <Input
               id="password"
               type="password"
+              autoComplete="current-password"
               value={form.password}
               onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
               required
+              disabled={loading}
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="w-full" disabled={loading}>
+          {statusMessage && (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {statusMessage}
+            </p>
+          )}
+          <Button type="submit" className="w-full gap-2" disabled={loading}>
+            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             {loading ? "Ingresando..." : "Ingresar"}
           </Button>
         </form>

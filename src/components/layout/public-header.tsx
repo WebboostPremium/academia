@@ -27,12 +27,9 @@ export function PublicHeader() {
               {item.label}
             </Link>
           ))}
-          <Link
-            href="/cursos"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Programas
-          </Link>
+          <Link href="/cursos" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">Programas</Link>
+          <Link href="/galeria" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">Galería</Link>
+          <Link href="/noticias" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">Noticias</Link>
         </nav>
         <div className="flex items-center gap-2">
           <ThemeToggle />

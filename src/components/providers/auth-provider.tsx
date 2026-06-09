@@ -12,6 +12,7 @@ interface AuthContextValue {
   loading: boolean;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  refreshSession: () => Promise<AppUser | null>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -24,15 +25,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadUser = useCallback(async (fbUser: User | null) => {
     if (!fbUser) {
       setUser(null);
-      return;
+      return null;
     }
     const profile = await getUserDocument(fbUser.uid);
     setUser(profile);
+    return profile;
   }, []);
+
+  const refreshSession = useCallback(async () => {
+    const fbUser = getClientAuth().currentUser;
+    if (!fbUser) return null;
+
+    const idToken = await fbUser.getIdToken(true);
+    await fetch("/api/auth/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken }),
+    });
+
+    const sessionRes = await fetch("/api/auth/session");
+    const sessionData = await sessionRes.json();
+    const profile = await loadUser(fbUser);
+    return profile ?? sessionData.user ?? null;
+  }, [loadUser]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(getClientAuth(), async (fbUser) => {
       setFirebaseUser(fbUser);
+      if (fbUser) {
+        try {
+          const idToken = await fbUser.getIdToken();
+          await fetch("/api/auth/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken }),
+          });
+        } catch {
+          /* continúa con perfil local */
+        }
+      }
       await loadUser(fbUser);
       setLoading(false);
     });
@@ -47,14 +78,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshUser = useCallback(async () => {
-    if (firebaseUser) {
-      await loadUser(firebaseUser);
-    }
-  }, [firebaseUser, loadUser]);
+    await refreshSession();
+  }, [refreshSession]);
 
   const value = useMemo(
-    () => ({ firebaseUser, user, loading, signOut, refreshUser }),
-    [firebaseUser, user, loading, signOut, refreshUser]
+    () => ({ firebaseUser, user, loading, signOut, refreshUser, refreshSession }),
+    [firebaseUser, user, loading, signOut, refreshUser, refreshSession]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

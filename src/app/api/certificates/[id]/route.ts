@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { verifySessionToken, getSessionCookieName } from "@/lib/auth/session";
+import { cloudinaryDownloadUrl } from "@/lib/utils/cloudinary-url";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const token = request.cookies.get(getSessionCookieName())?.value;
@@ -17,10 +18,35 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   const pdfUrl = data.pdfUrl as string;
-  const url = pdfUrl.startsWith("http") ? pdfUrl : null;
-  if (!url) {
+  if (!pdfUrl?.startsWith("http")) {
     return NextResponse.json({ error: "URL de certificado no disponible" }, { status: 404 });
   }
 
-  return NextResponse.json({ url, certificateNumber: data.certificateNumber });
+  const download = request.nextUrl.searchParams.get("download") === "1";
+  const filename = `${data.certificateNumber ?? "certificado"}.pdf`;
+
+  if (download) {
+    const targetUrl = cloudinaryDownloadUrl(pdfUrl, filename);
+    try {
+      const res = await fetch(targetUrl);
+      if (!res.ok) {
+        return NextResponse.json({ error: "No se pudo cargar el certificado" }, { status: 502 });
+      }
+      const buffer = Buffer.from(await res.arrayBuffer());
+      return new NextResponse(buffer, {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Cache-Control": "private, max-age=3600",
+        },
+      });
+    } catch {
+      return NextResponse.json({ error: "No se pudo cargar el certificado" }, { status: 502 });
+    }
+  }
+
+  return NextResponse.json({
+    url: cloudinaryDownloadUrl(pdfUrl, filename),
+    certificateNumber: data.certificateNumber,
+  });
 }

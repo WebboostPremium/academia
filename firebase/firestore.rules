@@ -42,17 +42,17 @@ service cloud.firestore {
     }
 
     match /modules/{moduleId} {
-      allow read: if isAdmin() || isCatequista();
+      allow read: if isAdmin() || isCatequista() || isAuth();
       allow write: if isAdmin();
     }
 
     match /lessons/{lessonId} {
-      allow read: if isAdmin() || isCatequista();
+      allow read: if isAdmin() || isCatequista() || isAuth();
       allow write: if isAdmin() || isCatequista();
     }
 
     match /quizzes/{quizId} {
-      allow read: if isAdmin() || isCatequista();
+      allow read: if isAdmin() || isCatequista() || isAuth();
       allow write: if isAdmin() || isCatequista();
     }
 
@@ -68,6 +68,67 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /certificates/{certId} {
+      allow read: if isAdmin()
+        || (isAuth() && resource.data.userId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    match /coupons/{couponId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /forum_questions/{questionId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update, delete: if isAdmin() || isCatequista();
+    }
+
+    match /forum_answers/{answerId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && (isAdmin() || isCatequista());
+      allow update, delete: if isAdmin() || isCatequista();
+    }
+
+    match /assignments/{assignmentId} {
+      allow read: if isAuth();
+      allow write: if isAdmin() || isCatequista();
+    }
+
+    match /submissions/{submissionId} {
+      allow read: if isAdmin() || isCatequista()
+        || (isAuth() && resource.data.userId == request.auth.uid);
+      allow create: if isAuth();
+      allow update: if isAdmin() || isCatequista();
+    }
+
+    match /live_classes/{classId} {
+      allow read: if isAuth();
+      allow write: if isAdmin() || isCatequista();
+    }
+
+    match /sacramental_records/{recordId} {
+      allow read: if isAdmin() || isCatequista()
+        || (isAuth() && resource.data.userId == request.auth.uid);
+      allow write: if isAdmin() || isCatequista();
+    }
+
+    match /gallery_albums/{albumId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /gallery_images/{imageId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /news/{articleId} {
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow write: if isAdmin();
+    }
+
     match /prayers/{prayerId} {
       allow read: if isAuth();
       allow write: if isAdmin();
@@ -75,12 +136,22 @@ service cloud.firestore {
 
     match /prayer_progress/{docId} {
       allow read, write: if isAuth()
-        && resource == null || resource.data.userId == request.auth.uid;
+        && (resource == null || resource.data.userId == request.auth.uid);
     }
 
     match /notifications/{notificationId} {
       allow read: if isAuth() && resource.data.userId == request.auth.uid;
       allow write: if isAdmin();
+    }
+
+    match /activity_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /email_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
 
     match /{document=**} {

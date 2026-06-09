@@ -1,6 +1,6 @@
 import type { UserRole } from "./roles";
 
-export const PUBLIC_ROUTES = ["/", "/cursos", "/nosotros", "/contacto", "/login", "/registro", "/recuperar"];
+export const PUBLIC_ROUTES = ["/", "/cursos", "/nosotros", "/contacto", "/galeria", "/noticias", "/login", "/registro", "/recuperar"];
 
 export const AUTH_ROUTES = ["/login", "/registro", "/recuperar"];
 

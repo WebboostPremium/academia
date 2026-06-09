@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, BookOpen, Layers, PlayCircle, ClipboardList, Users, UserCog,
   CreditCard, Award, FileText, Calendar, Heart, Church, MessageSquare, Bell, Settings, ClipboardCheck,
-  Ticket, ScrollText, CalendarDays,
+  Ticket, ScrollText, CalendarDays, Images, Newspaper,
 } from "lucide-react";
 import type { NavItem } from "@/components/layout/sidebar";
 
@@ -23,6 +23,8 @@ export const adminNavItems: NavItem[] = [
   { title: "Oraciones", href: "/admin/oraciones", icon: <Heart className="h-4 w-4" /> },
   { title: "Gestión Sacramental", href: "/admin/sacramental", icon: <Church className="h-4 w-4" /> },
   { title: "Foro", href: "/admin/foro", icon: <MessageSquare className="h-4 w-4" /> },
+  { title: "Galería", href: "/admin/galeria", icon: <Images className="h-4 w-4" /> },
+  { title: "Noticias", href: "/admin/noticias", icon: <Newspaper className="h-4 w-4" /> },
   { title: "Notificaciones", href: "/admin/notificaciones", icon: <Bell className="h-4 w-4" /> },
   { title: "Actividad", href: "/admin/actividad", icon: <ScrollText className="h-4 w-4" /> },
   { title: "Configuración", href: "/admin/configuracion", icon: <Settings className="h-4 w-4" /> },

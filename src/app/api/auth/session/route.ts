@@ -4,8 +4,37 @@ import {
   createSessionToken,
   getSessionCookieName,
   getSessionMaxAge,
+  verifySessionToken,
 } from "@/lib/auth/session";
 import type { SessionUser } from "@/types/user";
+
+function cookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    maxAge: getSessionMaxAge(),
+    path: "/",
+  };
+}
+
+async function buildSessionUser(uid: string): Promise<SessionUser | null> {
+  const userDoc = await getAdminDb().collection("users").doc(uid).get();
+  if (!userDoc.exists) return null;
+  const data = userDoc.data()!;
+  if (data.status === "blocked") return null;
+  return {
+    uid,
+    email: data.email,
+    displayName: data.displayName,
+    role: data.role,
+    status: data.status,
+  };
+}
+
+function setSessionCookie(response: NextResponse, token: string) {
+  response.cookies.set(getSessionCookieName(), token, cookieOptions());
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,36 +44,20 @@ export async function POST(request: NextRequest) {
     }
 
     const decoded = await getAdminAuth().verifyIdToken(idToken);
-    const userDoc = await getAdminDb().collection("users").doc(decoded.uid).get();
+    const sessionUser = await buildSessionUser(decoded.uid);
 
-    if (!userDoc.exists) {
-      return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+    if (!sessionUser) {
+      return NextResponse.json({ error: "Usuario no encontrado o bloqueado" }, { status: 403 });
     }
-
-    const data = userDoc.data()!;
-
-    if (data.status === "blocked") {
-      return NextResponse.json({ error: "Cuenta bloqueada" }, { status: 403 });
-    }
-
-    const sessionUser: SessionUser = {
-      uid: decoded.uid,
-      email: data.email,
-      displayName: data.displayName,
-      role: data.role,
-      status: data.status,
-    };
 
     const token = await createSessionToken(sessionUser);
     const response = NextResponse.json({ user: sessionUser });
+    setSessionCookie(response, token);
 
-    response.cookies.set(getSessionCookieName(), token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: getSessionMaxAge(),
-      path: "/",
-    });
+    const { FieldValue } = await import("firebase-admin/firestore");
+    await getAdminDb().collection("users").doc(decoded.uid).update({
+      lastLoginAt: FieldValue.serverTimestamp(),
+    }).catch(() => {});
 
     return response;
   } catch {
@@ -54,13 +67,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   const response = NextResponse.json({ success: true });
-  response.cookies.set(getSessionCookieName(), "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 0,
-    path: "/",
-  });
+  response.cookies.set(getSessionCookieName(), "", { ...cookieOptions(), maxAge: 0 });
   return response;
 }
 
@@ -70,7 +77,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ user: null });
   }
 
-  const { verifySessionToken } = await import("@/lib/auth/session");
-  const user = await verifySessionToken(token);
-  return NextResponse.json({ user });
+  const current = await verifySessionToken(token);
+  if (!current) {
+    return NextResponse.json({ user: null });
+  }
+
+  const sessionUser = await buildSessionUser(current.uid);
+  if (!sessionUser) {
+    const response = NextResponse.json({ user: null });
+    response.cookies.set(getSessionCookieName(), "", { ...cookieOptions(), maxAge: 0 });
+    return response;
+  }
+
+  const roleChanged = sessionUser.role !== current.role || sessionUser.status !== current.status;
+  const response = NextResponse.json({ user: sessionUser, refreshed: roleChanged });
+
+  if (roleChanged) {
+    const newToken = await createSessionToken(sessionUser);
+    setSessionCookie(response, newToken);
+  }
+
+  return response;
 }

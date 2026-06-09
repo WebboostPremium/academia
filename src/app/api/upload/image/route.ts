@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken, getSessionCookieName } from "@/lib/auth/session";
 import { uploadImageToCloudinary, isCloudinaryConfigured } from "@/lib/server/cloudinary";
 
-const FOLDERS = ["avatars", "courses", "logos", "banners"] as const;
+const FOLDERS = ["avatars", "courses", "logos", "banners", "gallery"] as const;
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get(getSessionCookieName())?.value;
