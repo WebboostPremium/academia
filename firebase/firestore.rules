@@ -18,15 +18,15 @@ service cloud.firestore {
     }
 
     function userRole() {
-      return userExists() ? userDoc().data.role : null;
+      return userExists() ? userDoc().data.role : '';
     }
 
     function isAdmin() {
-      return userExists() && userRole() == 'admin';
+      return userRole() == 'admin';
     }
 
     function isCatequista() {
-      return userExists() && userRole() == 'catequista';
+      return userRole() == 'catequista';
     }
 
     function isStaff() {
@@ -37,14 +37,10 @@ service cloud.firestore {
       return isAuth() && request.auth.uid == userId;
     }
 
-    function isEnrollmentOwner() {
-      return isAuth() && resource.data.userId == request.auth.uid;
-    }
-
     // ── Users ────────────────────────────────────────────────
     match /users/{userId} {
       allow read: if isOwner(userId) || isStaff();
-      allow create: if false; // solo API / Admin SDK
+      allow create: if false;
       allow update: if isAdmin()
         || (isOwner(userId)
           && !request.resource.data.diff(resource.data).affectedKeys()
@@ -52,13 +48,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // ── Settings (público lectura para branding) ─────────────
     match /settings/{docId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // ── Courses ────────────────────────────────────────────
     match /courses/{courseId} {
       allow read: if resource.data.status == 'published' || isStaff();
       allow write: if isAdmin();
@@ -87,11 +81,10 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    // ── Enrollments ────────────────────────────────────────
     match /enrollments/{enrollmentId} {
       allow read: if isStaff()
         || (isAuth() && resource.data.userId == request.auth.uid);
-      allow create: if false; // webhook Wompi / API
+      allow create: if false;
       allow update: if isAdmin()
         || (isAuth()
           && resource.data.userId == request.auth.uid
@@ -100,33 +93,29 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // ── Payments ───────────────────────────────────────────
     match /payments/{paymentId} {
-      allow read: if isAdmin()
+      allow read: if isStaff()
         || (isAuth() && resource.data.userId == request.auth.uid);
-      allow write: if false; // solo API / webhook
+      allow write: if false;
     }
 
-    // ── Certificates ───────────────────────────────────────
     match /certificates/{certId} {
-      allow read: if isAdmin()
+      allow read: if isStaff()
         || (isAuth() && resource.data.userId == request.auth.uid);
       allow write: if isAdmin();
     }
 
-    // ── Coupons ────────────────────────────────────────────
     match /coupons/{couponId} {
       allow read: if isAdmin();
       allow write: if isAdmin();
     }
 
-    // ── Forum ──────────────────────────────────────────────
     match /forum_questions/{questionId} {
       allow read: if isAuth();
       allow create: if isAuth()
-        && request.resource.data.authorId == request.auth.uid;
+        && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isStaff()
-        || (isAuth() && resource.data.authorId == request.auth.uid);
+        || (isAuth() && resource.data.userId == request.auth.uid);
     }
 
     match /forum_answers/{answerId} {
@@ -135,7 +124,6 @@ service cloud.firestore {
       allow update, delete: if isStaff();
     }
 
-    // ── Assignments & submissions ──────────────────────────
     match /assignments/{assignmentId} {
       allow read: if isAuth();
       allow write: if isStaff();
@@ -150,27 +138,23 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // ── Live classes ───────────────────────────────────────
     match /live_classes/{classId} {
       allow read: if isAuth();
       allow write: if isStaff();
     }
 
-    // ── Attendance ─────────────────────────────────────────
     match /attendance/{recordId} {
       allow read: if isStaff()
         || (isAuth() && resource.data.userId == request.auth.uid);
       allow write: if isStaff();
     }
 
-    // ── Sacramental records ────────────────────────────────
     match /sacramental_records/{recordId} {
       allow read: if isStaff()
         || (isAuth() && resource.data.userId == request.auth.uid);
       allow write: if isStaff();
     }
 
-    // ── Gallery (público) ──────────────────────────────────
     match /gallery_albums/{albumId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -181,13 +165,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // ── News (público si publicado) ────────────────────────
     match /news/{articleId} {
       allow read: if resource.data.status == 'published' || isAdmin();
       allow write: if isAdmin();
     }
 
-    // ── Prayers ────────────────────────────────────────────
     match /prayers/{prayerId} {
       allow read: if isAuth();
       allow write: if isAdmin();
@@ -204,31 +186,28 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
     }
 
-    // ── Notifications ──────────────────────────────────────
     match /notifications/{notificationId} {
-      allow read: if isAdmin()
+      allow read: if isStaff()
         || (isAuth() && resource.data.userId == request.auth.uid);
-      allow create: if isAdmin() || isCatequista();
-      allow update: if isAdmin()
+      allow create: if isStaff();
+      allow update: if isStaff()
         || (isAuth()
           && resource.data.userId == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']));
       allow delete: if isAdmin();
     }
 
-    // ── Logs (solo servidor; admin puede crear desde panel) ─
     match /activity_logs/{logId} {
       allow read: if isAdmin();
-      allow create: if isAdmin() || isCatequista();
+      allow create: if isStaff();
       allow update, delete: if false;
     }
 
     match /email_logs/{logId} {
       allow read: if isAdmin();
-      allow write: if false; // solo Admin SDK / API
+      allow write: if false;
     }
 
-    // ── Fallback: admin accede a cualquier otra colección ──
     match /{document=**} {
       allow read, write: if isAdmin();
     }

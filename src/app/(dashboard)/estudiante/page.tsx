@@ -31,7 +31,11 @@ export default function EstudianteDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (authLoading) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     async function load() {
       try {
         const [userEnrollments, prayers, prayerProgress] = await Promise.all([

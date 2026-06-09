@@ -52,20 +52,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(getClientAuth(), async (fbUser) => {
       setFirebaseUser(fbUser);
-      if (fbUser) {
-        try {
-          const idToken = await fbUser.getIdToken();
-          await fetch("/api/auth/session", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ idToken }),
-          });
-        } catch {
-          /* continúa con perfil local */
+      try {
+        if (fbUser) {
+          await loadUser(fbUser);
+          // Sincronizar cookie sin bloquear la UI
+          fbUser
+            .getIdToken()
+            .then((idToken) =>
+              fetch("/api/auth/session", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ idToken }),
+              })
+            )
+            .catch(() => {});
+        } else {
+          setUser(null);
         }
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-      await loadUser(fbUser);
-      setLoading(false);
     });
     return unsubscribe;
   }, [loadUser]);

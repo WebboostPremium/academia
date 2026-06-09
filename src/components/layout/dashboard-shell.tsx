@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sidebar, type NavItem } from "@/components/layout/sidebar";
 import { DashboardHeader } from "@/components/layout/dashboard-header";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
 
 interface DashboardShellProps {
   navItems: NavItem[];
@@ -11,7 +14,29 @@ interface DashboardShellProps {
 }
 
 export function DashboardShell({ navItems, children }: DashboardShellProps) {
+  const { user, firebaseUser, loading } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+        Cargando...
+      </div>
+    );
+  }
+
+  if (!user || !firebaseUser) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
+        <p className="max-w-md text-muted-foreground">
+          No se pudo cargar tu sesión. Cierra sesión e ingresa de nuevo.
+        </p>
+        <Button asChild>
+          <Link href="/login">Ir al login</Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-muted/40">

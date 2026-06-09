@@ -19,14 +19,22 @@ export default function AdminDashboardPage() {
   const [data, setData] = useState<Awaited<ReturnType<typeof getDashboardAnalytics>> | null>(null);
 
   useEffect(() => {
-    getDashboardAnalytics(6).then((analytics) => {
-      setData(analytics);
-      setLoading(false);
-    });
+    getDashboardAnalytics(6)
+      .then((analytics) => setData(analytics))
+      .catch(() => setData(null))
+      .finally(() => setLoading(false));
   }, []);
 
-  if (loading || !data) {
+  if (loading) {
     return <p className="text-muted-foreground">Cargando métricas...</p>;
+  }
+
+  if (!data) {
+    return (
+      <p className="text-muted-foreground">
+        No se pudieron cargar las métricas. Verifica tu conexión y que las reglas de Firestore estén publicadas.
+      </p>
+    );
   }
 
   return (
