@@ -11,10 +11,58 @@ const sourceSerif = Source_Serif_4({
   display: "swap",
 });
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://catequesisreinadelapaz.com";
+
 export const metadata: Metadata = {
-  title: "Catequesis Online | Formación en la fe",
+  metadataBase: new URL(APP_URL),
+  title: {
+    default: "Catequesis Online | Formación en la fe",
+    template: "%s | Catequesis Online",
+  },
   description:
-    "Plataforma de catequesis para Bautismo, Primera Comunión y Confirmación. Aprende, crece y camina en la fe.",
+    "Plataforma de catequesis para Bautismo, Primera Comunión y Confirmación. Ministerio de Catequesis, Catedral San Miguel.",
+  keywords: [
+    "catequesis",
+    "bautismo",
+    "primera comunión",
+    "confirmación",
+    "catequesis online",
+    "catedral san miguel",
+  ],
+  applicationName: "Catequesis Online",
+  icons: {
+    icon: [{ url: "/brand/logo-catequesis-online.jpg", type: "image/jpeg" }],
+    apple: [{ url: "/brand/logo-catequesis-online.jpg", type: "image/jpeg" }],
+    shortcut: "/brand/logo-catequesis-online.jpg",
+  },
+  openGraph: {
+    type: "website",
+    locale: "es_SV",
+    url: APP_URL,
+    siteName: "Catequesis Online",
+    title: "Catequesis Online | Formación en la fe",
+    description:
+      "Prepara los sacramentos de Bautismo, Primera Comunión y Confirmación con la guía de tu parroquia.",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1024,
+        height: 1024,
+        alt: "Catequesis Online — Ministerio de Catequesis, Catedral San Miguel",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Catequesis Online | Formación en la fe",
+    description:
+      "Prepara los sacramentos de Bautismo, Primera Comunión y Confirmación con la guía de tu parroquia.",
+    images: ["/og-image.jpg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
