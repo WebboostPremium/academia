@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Clock, BookOpen, ClipboardList, Award, Flame, Video } from "lucide-react";
+import { Clock, BookOpen, ClipboardList, Award, Flame, Video, Megaphone } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ export default function EstudianteDashboardPage() {
   const [enrollments, setEnrollments] = useState<Array<{ course: Course; enrollment: Enrollment }>>([]);
   const [nextClass, setNextClass] = useState<{ title: string; date: string; url: string } | null>(null);
   const [stats, setStats] = useState({ studyTime: 0, lessons: 0, quizzes: 0, certs: 0, prayers: 0 });
+  const [announcements, setAnnouncements] = useState<Array<{ slug: string; title: string; excerpt?: string }>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,11 +39,13 @@ export default function EstudianteDashboardPage() {
     }
     async function load() {
       try {
-        const [userEnrollments, prayers, prayerProgress] = await Promise.all([
+        const [userEnrollments, prayers, prayerProgress, newsRes] = await Promise.all([
           getUserEnrollments(user!.uid),
           getPrayers(),
           getPrayerProgress(user!.uid),
+          fetch("/api/public/news").then((r) => (r.ok ? r.json() : { articles: [] })).catch(() => ({ articles: [] })),
         ]);
+        setAnnouncements((newsRes.articles ?? []).slice(0, 5));
         const active = userEnrollments.filter((e) => e.status === "active" || e.status === "completed");
         const enrolled = (await Promise.all(
           active.map(async (enrollment) => {
@@ -100,6 +103,25 @@ export default function EstudianteDashboardPage() {
         <h1 className="text-2xl font-bold">¡Bienvenido{firstName ? `, ${firstName}` : ""}!</h1>
         <p className="text-muted-foreground">Continúa tu preparación sacramental</p>
       </div>
+
+      {announcements.length > 0 && (
+        <div className="card-shadow rounded-2xl bg-white p-5">
+          <div className="mb-3 flex items-center gap-2 text-primary">
+            <Megaphone className="h-5 w-5" />
+            <h2 className="font-semibold">Anuncios de la parroquia</h2>
+          </div>
+          <ul className="space-y-3">
+            {announcements.map((item) => (
+              <li key={item.slug} className="rounded-lg border border-border/60 p-3">
+                <Link href={`/noticias/${item.slug}`} className="font-medium hover:text-primary">
+                  {item.title}
+                </Link>
+                {item.excerpt && <p className="mt-1 text-sm text-muted-foreground">{item.excerpt}</p>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Top row */}
       <div className="grid gap-4 md:grid-cols-3">

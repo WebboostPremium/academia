@@ -34,14 +34,9 @@ export async function GET(request: NextRequest) {
 
   const courseId = question.data()!.courseId as string;
   if (!isStaffRole(session.role)) {
-    const enrollment = await getAdminDb()
-      .collection("enrollments")
-      .where("userId", "==", session.uid)
-      .where("courseId", "==", courseId)
-      .where("status", "in", ["active", "completed"])
-      .limit(1)
-      .get();
-    if (enrollment.empty) {
+    const enrollment = await getAdminDb().collection("enrollments").doc(`${session.uid}_${courseId}`).get();
+    const status = enrollment.data()?.status;
+    if (!enrollment.exists || (status !== "active" && status !== "completed")) {
       return NextResponse.json({ error: "Sin acceso" }, { status: 403 });
     }
   }
@@ -52,9 +47,11 @@ export async function GET(request: NextRequest) {
     .orderBy("createdAt", "asc")
     .get();
 
-  return NextResponse.json({
-    answers: snap.docs.map((d) => mapAnswer(d.id, d.data())),
-  });
+  const answers = snap.docs
+    .map((d) => mapAnswer(d.id, d.data()))
+    .filter((a) => isStaffRole(session.role) || a.status !== "hidden");
+
+  return NextResponse.json({ answers });
 }
 
 export async function POST(request: NextRequest) {

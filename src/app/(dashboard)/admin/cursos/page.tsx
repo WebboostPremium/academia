@@ -81,7 +81,7 @@ export default function CursosAdminPage() {
       instructorBio: course.instructorBio ?? "",
       objectives: (course.objectives ?? []).join("\n"),
       durationLabel: course.durationLabel ?? "",
-      price: String(course.price),
+      price: course.price ? String(course.price / 100) : "",
       passingScore: String(course.passingScore),
     });
     setShowForm(true);
@@ -92,6 +92,13 @@ export default function CursosAdminPage() {
     if (!user) return;
     setSaving(true);
     try {
+      const existing = editingId ? courses.find((c) => c.id === editingId) : null;
+      const priceUsd = Number(form.price);
+      if (!Number.isFinite(priceUsd) || priceUsd < 0) {
+        toast.error("Ingresa un precio válido en dólares");
+        setSaving(false);
+        return;
+      }
       const data = {
         slug: form.slug,
         title: form.title,
@@ -102,12 +109,12 @@ export default function CursosAdminPage() {
         instructorBio: form.instructorBio || undefined,
         objectives: form.objectives.split("\n").map((o) => o.trim()).filter(Boolean),
         durationLabel: form.durationLabel || undefined,
-        price: Number(form.price),
+        price: Math.round(priceUsd * 100),
         currency: "USD" as const,
         category: "sacramental" as const,
-        status: "draft" as const,
+        status: existing?.status ?? ("draft" as const),
         passingScore: Number(form.passingScore),
-        moduleOrder: [] as string[],
+        moduleOrder: existing?.moduleOrder ?? [],
       };
       if (editingId) {
         await updateCourse(editingId, data);
@@ -234,8 +241,17 @@ export default function CursosAdminPage() {
                 <Textarea value={form.objectives} onChange={(e) => setForm({ ...form, objectives: e.target.value })} rows={4} />
               </div>
               <div className="space-y-2">
-                <Label>Precio (centavos)</Label>
-                <Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required />
+                <Label>Precio (USD)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.price}
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  placeholder="Ej: 25.00"
+                  required
+                />
+                <p className="text-xs text-muted-foreground">Escribe el precio en dólares. Ejemplo: 25 = $25.00</p>
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label>Portada del curso (Cloudinary)</Label>

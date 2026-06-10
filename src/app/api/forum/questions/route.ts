@@ -26,14 +26,10 @@ function mapQuestion(id: string, data: FirebaseFirestore.DocumentData) {
 
 async function hasCourseAccess(uid: string, role: SessionUser["role"], courseId: string): Promise<boolean> {
   if (isStaffRole(role)) return true;
-  const snap = await getAdminDb()
-    .collection("enrollments")
-    .where("userId", "==", uid)
-    .where("courseId", "==", courseId)
-    .where("status", "in", ["active", "completed"])
-    .limit(1)
-    .get();
-  return !snap.empty;
+  const doc = await getAdminDb().collection("enrollments").doc(`${uid}_${courseId}`).get();
+  if (!doc.exists) return false;
+  const status = doc.data()?.status;
+  return status === "active" || status === "completed";
 }
 
 export async function GET(request: NextRequest) {
@@ -53,9 +49,11 @@ export async function GET(request: NextRequest) {
     .orderBy("createdAt", "desc")
     .get();
 
-  return NextResponse.json({
-    questions: snap.docs.map((d) => mapQuestion(d.id, d.data())),
-  });
+  const questions = snap.docs
+    .map((d) => mapQuestion(d.id, d.data()))
+    .filter((q) => isStaffRole(session.role) || q.status !== "hidden");
+
+  return NextResponse.json({ questions });
 }
 
 export async function POST(request: NextRequest) {

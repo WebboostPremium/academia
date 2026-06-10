@@ -50,8 +50,8 @@ export default function ForoPage() {
           })
         );
         setAnswers(answerMap);
-      } catch {
-        toast.error("Error al cargar el foro");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Error al cargar el foro");
       }
     }
     loadForum();
@@ -75,8 +75,8 @@ export default function ForoPage() {
       setReplyBody("");
       const updated = await getAnswers(replyingId);
       setAnswers((prev) => ({ ...prev, [replyingId]: updated }));
-    } catch {
-      toast.error("Error al publicar la respuesta");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al publicar la respuesta");
     } finally {
       setSaving(false);
     }

@@ -9,12 +9,14 @@ import {
 import type { SessionUser } from "@/types/user";
 
 function cookieOptions() {
+  const domain = process.env.SESSION_COOKIE_DOMAIN?.trim();
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax" as const,
     maxAge: getSessionMaxAge(),
     path: "/",
+    ...(domain ? { domain } : {}),
   };
 }
 

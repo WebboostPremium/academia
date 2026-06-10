@@ -104,8 +104,8 @@ export default function EstudianteForoPage() {
       setTitle("");
       setBody("");
       toast.success("Pregunta publicada");
-    } catch {
-      toast.error("Error al publicar la pregunta");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al publicar la pregunta");
     } finally {
       setSubmitting(false);
     }

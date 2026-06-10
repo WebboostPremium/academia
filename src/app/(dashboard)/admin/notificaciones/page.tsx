@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/shared/page-header";
 import { DataTable } from "@/components/dashboard/data-table";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getRecentNotifications, createNotification } from "@/lib/services/notifications";
 import { getAllUsers } from "@/lib/services/users";
 import { getPublishedCourses } from "@/lib/services/courses";
 import { formatDateTime } from "@/lib/utils/format";
@@ -24,7 +22,6 @@ const TYPE_LABELS: Record<Notification["type"], string> = {
 };
 
 export default function NotificacionesAdminPage() {
-  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [students, setStudents] = useState<Array<{ uid: string; displayName: string }>>([]);
   const [courses, setCourses] = useState<Array<{ id: string; title: string }>>([]);
@@ -33,12 +30,22 @@ export default function NotificacionesAdminPage() {
   const [form, setForm] = useState({ title: "", body: "", target: "general", userId: "", courseId: "" });
 
   async function load() {
-    const [notifs, studs, crs] = await Promise.all([
-      getRecentNotifications(50),
+    const [notifRes, studs, crs] = await Promise.all([
+      fetch("/api/notifications/recent?limit=50", { credentials: "same-origin" }),
       getAllUsers(ROLES.ESTUDIANTE),
       getPublishedCourses(),
     ]);
-    setNotifications(notifs);
+
+    if (notifRes.ok) {
+      const data = await notifRes.json();
+      setNotifications(
+        (data.notifications as Array<Record<string, unknown>>).map((n) => ({
+          ...n,
+          createdAt: new Date(n.createdAt as string),
+        })) as Notification[]
+      );
+    }
+
     setStudents(studs.map((s) => ({ uid: s.uid, displayName: s.displayName })));
     setCourses(crs.map((c) => ({ id: c.id, title: c.title })));
     setLoading(false);
@@ -48,34 +55,26 @@ export default function NotificacionesAdminPage() {
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
-    if (!user) return;
     setSending(true);
     try {
-      const targets = form.target === "general"
-        ? students
-        : form.target === "student" && form.userId
-          ? students.filter((s) => s.uid === form.userId)
-          : form.target === "course" && form.courseId
-            ? students
-            : [];
-
-      if (targets.length === 0) {
-        toast.error("Selecciona un destinatario válido");
+      const res = await fetch("/api/notifications/send", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          target: form.target,
+          title: form.title,
+          body: form.body,
+          userId: form.userId || undefined,
+          courseId: form.courseId || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Error al enviar notificación");
         return;
       }
-
-      await Promise.all(
-        targets.map((t) =>
-          createNotification({
-            userId: t.uid,
-            type: "system",
-            title: form.title,
-            body: form.body,
-            link: form.courseId ? `/estudiante/cursos` : undefined,
-          })
-        )
-      );
-      toast.success(`Notificación enviada a ${targets.length} usuario(s)`);
+      toast.success(`Notificación enviada a ${data.count} usuario(s)`);
       setForm({ title: "", body: "", target: "general", userId: "", courseId: "" });
       await load();
     } catch {
@@ -111,7 +110,7 @@ export default function NotificacionesAdminPage() {
             {form.target === "student" && (
               <div className="space-y-2">
                 <Label>Estudiante</Label>
-                <select className={selectClass} value={form.userId} onChange={(e) => setForm({ ...form, userId: e.target.value })}>
+                <select className={selectClass} value={form.userId} onChange={(e) => setForm({ ...form, userId: e.target.value })} required>
                   <option value="">Seleccionar...</option>
                   {students.map((s) => <option key={s.uid} value={s.uid}>{s.displayName}</option>)}
                 </select>
@@ -120,7 +119,7 @@ export default function NotificacionesAdminPage() {
             {form.target === "course" && (
               <div className="space-y-2">
                 <Label>Curso</Label>
-                <select className={selectClass} value={form.courseId} onChange={(e) => setForm({ ...form, courseId: e.target.value })}>
+                <select className={selectClass} value={form.courseId} onChange={(e) => setForm({ ...form, courseId: e.target.value })} required>
                   <option value="">Seleccionar...</option>
                   {courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
                 </select>

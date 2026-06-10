@@ -5,7 +5,8 @@ async function forumFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, credentials: "same-origin" });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error((data as { error?: string }).error ?? "Error en el foro");
+    const message = (data as { error?: string }).error ?? `Error en el foro (${res.status})`;
+    throw new Error(message);
   }
   return data as T;
 }
