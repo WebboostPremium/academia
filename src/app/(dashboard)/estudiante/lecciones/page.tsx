@@ -25,7 +25,11 @@ export default function EstudianteLeccionesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (authLoading) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     async function load() {
       try {
@@ -80,7 +84,7 @@ export default function EstudianteLeccionesPage() {
                 <h2 className="mb-4 text-lg font-semibold">{course.title}</h2>
                 <div className="space-y-2">
                   {lessons.map((lesson) => {
-                    const completed = enrollment.progress.lessonsCompleted.includes(lesson.id);
+                    const completed = (enrollment.progress.lessonsCompleted ?? []).includes(lesson.id);
                     return (
                       <Link key={lesson.id} href={`/estudiante/lecciones/${lesson.id}`}>
                         <Card className="transition-colors hover:border-primary/50">

@@ -39,12 +39,14 @@ export default function PagosAdminPage() {
       getPayments(),
       getAllUsers(ROLES.ESTUDIANTE),
       getCourses(),
-    ]).then(([pays, studs, crs]) => {
-      setPayments(pays);
-      setUsers(Object.fromEntries(studs.map((s) => [s.uid, s.displayName])));
-      setCourses(Object.fromEntries(crs.map((c) => [c.id, c.title])));
-      setLoading(false);
-    });
+    ])
+      .then(([pays, studs, crs]) => {
+        setPayments(pays);
+        setUsers(Object.fromEntries(studs.map((s) => [s.uid, s.displayName])));
+        setCourses(Object.fromEntries(crs.map((c) => [c.id, c.title])));
+      })
+      .catch(() => setPayments([]))
+      .finally(() => setLoading(false));
   }, []);
 
   const filtered = useMemo(() => {

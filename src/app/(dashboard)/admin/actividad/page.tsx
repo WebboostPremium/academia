@@ -25,10 +25,10 @@ export default function ActividadAdminPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getActivityLogs(150).then((data) => {
-      setLogs(data);
-      setLoading(false);
-    });
+    getActivityLogs(150)
+      .then((data) => setLogs(data))
+      .catch(() => setLogs([]))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <p className="text-muted-foreground">Cargando actividad...</p>;

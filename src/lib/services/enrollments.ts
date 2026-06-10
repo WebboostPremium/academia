@@ -3,18 +3,40 @@ import { fsCollection, fsDoc } from "@/lib/firebase/firestore-helpers";
 import { toDate } from "@/lib/firebase/converters";
 import type { Enrollment } from "@/types/course";
 
+function defaultProgress(): Enrollment["progress"] {
+  return {
+    percentComplete: 0,
+    modulesCompleted: [],
+    lessonsCompleted: [],
+    quizzesPassed: [],
+    finalExamPassed: false,
+    averageScore: 0,
+    lastActivityAt: new Date(),
+  };
+}
+
 function mapEnrollment(id: string, d: Record<string, unknown>): Enrollment {
-  const p = d.progress as Enrollment["progress"];
+  const p = (d.progress as Partial<Enrollment["progress"]>) ?? {};
+  const base = defaultProgress();
   return {
     id, userId: d.userId as string, courseId: d.courseId as string,
     paymentId: d.paymentId as string | undefined, status: d.status as Enrollment["status"],
     enrolledAt: toDate(d.enrolledAt as never),
     completedAt: d.completedAt ? toDate(d.completedAt as never) : undefined,
-    progress: { ...p, lastActivityAt: toDate(p?.lastActivityAt as never) },
+    progress: {
+      ...base,
+      ...p,
+      modulesCompleted: p.modulesCompleted ?? base.modulesCompleted,
+      lessonsCompleted: p.lessonsCompleted ?? base.lessonsCompleted,
+      quizzesPassed: p.quizzesPassed ?? base.quizzesPassed,
+      lastActivityAt: toDate(p.lastActivityAt as never) ?? base.lastActivityAt,
+    },
   };
 }
 
 export async function getEnrollment(userId: string, courseId: string): Promise<Enrollment | null> {
+  const direct = await getDoc(fsDoc("enrollments", `${userId}_${courseId}`));
+  if (direct.exists()) return mapEnrollment(direct.id, direct.data());
   const snap = await getDocs(query(fsCollection("enrollments"), where("userId", "==", userId), where("courseId", "==", courseId)));
   if (snap.empty) return null;
   const d = snap.docs[0];
@@ -43,7 +65,12 @@ export async function createEnrollment(userId: string, courseId: string, payment
 }
 
 export async function updateEnrollmentProgress(id: string, progress: Partial<Enrollment["progress"]>): Promise<void> {
-  await updateDoc(fsDoc("enrollments", id), { progress: { ...progress, lastActivityAt: serverTimestamp() } });
+  const snap = await getDoc(fsDoc("enrollments", id));
+  if (!snap.exists()) return;
+  const current = mapEnrollment(snap.id, snap.data());
+  await updateDoc(fsDoc("enrollments", id), {
+    progress: { ...current.progress, ...progress, lastActivityAt: serverTimestamp() },
+  });
 }
 
 export async function markLessonComplete(enrollmentId: string, lessonId: string, totalLessons: number, current: Enrollment): Promise<void> {

@@ -14,7 +14,7 @@ interface DashboardShellProps {
 }
 
 export function DashboardShell({ navItems, children }: DashboardShellProps) {
-  const { user, firebaseUser, loading } = useAuth();
+  const { user, loading } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   if (loading) {
@@ -25,7 +25,7 @@ export function DashboardShell({ navItems, children }: DashboardShellProps) {
     );
   }
 
-  if (!user || !firebaseUser) {
+  if (!user) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
         <p className="max-w-md text-muted-foreground">

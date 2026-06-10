@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { PlatformCalendar, type CalendarEvent } from "@/components/calendar/platform-calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,12 +13,18 @@ import { getUserEnrollments } from "@/lib/services/enrollments";
 import { getCourse } from "@/lib/services/courses";
 
 export default function EstudianteCalendarioPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (authLoading) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     async function load() {
+      try {
       const [classes, assignments, enrollments] = await Promise.all([
         getLiveClasses(),
         getAssignments(),
@@ -53,9 +60,18 @@ export default function EstudianteCalendarioPage() {
         }));
 
       setEvents([...classEvents, ...taskEvents]);
+      } catch {
+        toast.error("Error al cargar el calendario");
+      } finally {
+        setLoading(false);
+      }
     }
     load();
-  }, [user]);
+  }, [user, authLoading]);
+
+  if (authLoading || loading) {
+    return <p className="text-muted-foreground">Cargando calendario...</p>;
+  }
 
   const upcoming = events.filter((e) => e.date >= new Date()).sort((a, b) => a.date.getTime() - b.date.getTime()).slice(0, 6);
 

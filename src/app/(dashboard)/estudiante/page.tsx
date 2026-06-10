@@ -39,30 +39,51 @@ export default function EstudianteDashboardPage() {
     }
     async function load() {
       try {
-        const [userEnrollments, prayers, prayerProgress, newsRes] = await Promise.all([
+        const [enrollmentsRes, prayersRes, progressRes, newsRes] = await Promise.allSettled([
           getUserEnrollments(user!.uid),
           getPrayers(),
           getPrayerProgress(user!.uid),
           fetch("/api/public/news").then((r) => (r.ok ? r.json() : { articles: [] })).catch(() => ({ articles: [] })),
         ]);
-        setAnnouncements((newsRes.articles ?? []).slice(0, 5));
+
+        const userEnrollments = enrollmentsRes.status === "fulfilled" ? enrollmentsRes.value : [];
+        const prayers = prayersRes.status === "fulfilled" ? prayersRes.value : [];
+        const prayerProgress = progressRes.status === "fulfilled" ? progressRes.value : [];
+        const news = newsRes.status === "fulfilled" ? newsRes.value : { articles: [] };
+
+        if (enrollmentsRes.status === "rejected") toast.error("No se pudieron cargar tus cursos");
+
+        setAnnouncements((news.articles ?? []).slice(0, 5));
         const active = userEnrollments.filter((e) => e.status === "active" || e.status === "completed");
-        const enrolled = (await Promise.all(
+        const enrolled = (await Promise.allSettled(
           active.map(async (enrollment) => {
             const course = await getCourse(enrollment.courseId);
             return course ? { course, enrollment } : null;
           })
-        )).filter(Boolean) as Array<{ course: Course; enrollment: Enrollment }>;
+        ))
+          .filter((r) => r.status === "fulfilled" && r.value)
+          .map((r) => (r as PromiseFulfilledResult<{ course: Course; enrollment: Enrollment } | null>).value!)
+          .filter(Boolean) as Array<{ course: Course; enrollment: Enrollment }>;
         setEnrollments(enrolled);
 
         const courseIds = active.map((e) => e.courseId);
-        const upcoming = (await getUpcomingClasses()).filter((c) => courseIds.includes(c.courseId));
-        if (upcoming[0]) {
-          setNextClass({ title: upcoming[0].title, date: formatDateTime(upcoming[0].scheduledAt), url: upcoming[0].meetingUrl });
+        try {
+          const upcoming = (await getUpcomingClasses()).filter((c) => courseIds.includes(c.courseId));
+          if (upcoming[0]) {
+            setNextClass({ title: upcoming[0].title, date: formatDateTime(upcoming[0].scheduledAt), url: upcoming[0].meetingUrl });
+          }
+        } catch {
+          // clases en vivo opcionales
         }
 
-        const totalLessons = enrolled.reduce((s, e) => s + e.enrollment.progress.lessonsCompleted.length, 0);
-        const totalQuizzes = enrolled.reduce((s, e) => s + e.enrollment.progress.quizzesPassed.length, 0);
+        const totalLessons = enrolled.reduce(
+          (s, e) => s + (e.enrollment.progress.lessonsCompleted?.length ?? 0),
+          0
+        );
+        const totalQuizzes = enrolled.reduce(
+          (s, e) => s + (e.enrollment.progress.quizzesPassed?.length ?? 0),
+          0
+        );
         const certs = enrolled.filter((e) => e.enrollment.status === "completed").length;
         const prayersLearned = prayers.filter((p) => prayerProgress.some((pp) => pp.prayerId === p.id && pp.learned)).length;
 

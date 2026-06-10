@@ -92,7 +92,7 @@ export default function EstudianteLeccionPage() {
   const nextLesson = lessons.find((l, i) => lessons[i - 1]?.id === lessonId || (i > 0 && lessons[i - 1].id === lessonId));
   const currentIdx = lessons.findIndex((l) => l.id === lessonId);
   const next = currentIdx >= 0 ? lessons[currentIdx + 1] : null;
-  const isComplete = enrollment?.progress.lessonsCompleted.includes(lessonId) ?? false;
+  const isComplete = (enrollment?.progress.lessonsCompleted ?? []).includes(lessonId);
 
   if (loading) return <div className="flex h-64 items-center justify-center">Cargando...</div>;
   if (!lesson || !enrollment || !course) return <div className="p-8 text-center text-muted-foreground">Lección no disponible</div>;

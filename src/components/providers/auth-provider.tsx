@@ -17,6 +17,30 @@ interface AuthContextValue {
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
+async function syncSessionCookie(idToken: string) {
+  await fetch("/api/auth/session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken }),
+    credentials: "same-origin",
+  });
+}
+
+async function loadProfileFromSession(): Promise<AppUser | null> {
+  const sessionRes = await fetch("/api/auth/session", { credentials: "same-origin" });
+  if (!sessionRes.ok) return null;
+  const sessionData = await sessionRes.json();
+  const sessionUser = sessionData.user as AppUser | null;
+  if (!sessionUser) return null;
+  return {
+    ...sessionUser,
+    studyTimeMinutes: sessionUser.studyTimeMinutes ?? 0,
+    achievements: sessionUser.achievements ?? [],
+    createdAt: sessionUser.createdAt ? new Date(sessionUser.createdAt) : new Date(),
+    updatedAt: sessionUser.updatedAt ? new Date(sessionUser.updatedAt) : new Date(),
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [user, setUser] = useState<AppUser | null>(null);
@@ -27,9 +51,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       return null;
     }
-    const profile = await getUserDocument(fbUser.uid);
-    setUser(profile);
-    return profile;
+    try {
+      const profile = await getUserDocument(fbUser.uid);
+      if (profile) {
+        setUser(profile);
+        return profile;
+      }
+    } catch {
+      // Firestore puede fallar temporalmente; usar sesión del servidor
+    }
+    const fallback = await loadProfileFromSession();
+    setUser(fallback);
+    return fallback;
   }, []);
 
   const refreshSession = useCallback(async () => {
@@ -37,16 +70,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!fbUser) return null;
 
     const idToken = await fbUser.getIdToken(true);
-    await fetch("/api/auth/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken }),
-    });
-
-    const sessionRes = await fetch("/api/auth/session");
-    const sessionData = await sessionRes.json();
-    const profile = await loadUser(fbUser);
-    return profile ?? sessionData.user ?? null;
+    await syncSessionCookie(idToken);
+    return loadUser(fbUser);
   }, [loadUser]);
 
   useEffect(() => {
@@ -54,23 +79,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setFirebaseUser(fbUser);
       try {
         if (fbUser) {
+          const idToken = await fbUser.getIdToken();
+          await syncSessionCookie(idToken);
           await loadUser(fbUser);
-          // Sincronizar cookie sin bloquear la UI
-          fbUser
-            .getIdToken()
-            .then((idToken) =>
-              fetch("/api/auth/session", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ idToken }),
-              })
-            )
-            .catch(() => {});
         } else {
           setUser(null);
         }
       } catch {
-        setUser(null);
+        const fallback = fbUser ? await loadProfileFromSession() : null;
+        setUser(fallback);
       } finally {
         setLoading(false);
       }
@@ -79,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadUser]);
 
   const signOut = useCallback(async () => {
-    await fetch("/api/auth/session", { method: "DELETE" });
+    await fetch("/api/auth/session", { method: "DELETE", credentials: "same-origin" });
     await firebaseSignOut(getClientAuth());
     setUser(null);
     setFirebaseUser(null);

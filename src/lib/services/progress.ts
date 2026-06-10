@@ -14,8 +14,8 @@ export async function recalculateProgress(userId: string, courseId: string): Pro
 
   const totalLessons = lessons.filter((l) => l.status === "published").length;
   const lessonQuizzes = lessons.filter((l) => l.quizId).length;
-  const lessonsDone = enrollment.progress.lessonsCompleted.length;
-  const quizzesPassed = enrollment.progress.quizzesPassed.length;
+  const lessonsDone = enrollment.progress.lessonsCompleted?.length ?? 0;
+  const quizzesPassed = enrollment.progress.quizzesPassed?.length ?? 0;
   const finalPassed = enrollment.progress.finalExamPassed;
 
   let percent = 0;
@@ -24,13 +24,13 @@ export async function recalculateProgress(userId: string, courseId: string): Pro
   if (finalPassed) percent += 15;
 
   const allResults = await Promise.all(
-    enrollment.progress.quizzesPassed.map((qid) => getQuizResults(userId, qid))
+    (enrollment.progress.quizzesPassed ?? []).map((qid) => getQuizResults(userId, qid))
   );
   const scores = allResults.flat().map((r) => r.score);
   const averageScore = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
 
   const modulesCompleted = modules
-    .filter((m) => m.lessonOrder.every((lid) => enrollment.progress.lessonsCompleted.includes(lid)))
+    .filter((m) => m.lessonOrder.every((lid) => (enrollment.progress.lessonsCompleted ?? []).includes(lid)))
     .map((m) => m.id);
 
   await updateEnrollmentProgress(enrollment.id, {

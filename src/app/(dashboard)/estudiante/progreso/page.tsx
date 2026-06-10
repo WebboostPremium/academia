@@ -26,7 +26,11 @@ export default function EstudianteProgresoPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (authLoading) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     async function load() {
       try {
@@ -97,16 +101,16 @@ export default function EstudianteProgresoPage() {
                     <div className="rounded-lg border p-3">
                       <p className="text-muted-foreground">Lecciones</p>
                       <p className="text-lg font-semibold">
-                        {p.lessonsCompleted.length} / {totalLessons}
+                        {(p.lessonsCompleted ?? []).length} / {totalLessons}
                       </p>
                     </div>
                     <div className="rounded-lg border p-3">
                       <p className="text-muted-foreground">Quizzes</p>
-                      <p className="text-lg font-semibold">{p.quizzesPassed.length}</p>
+                      <p className="text-lg font-semibold">{(p.quizzesPassed ?? []).length}</p>
                     </div>
                     <div className="rounded-lg border p-3">
                       <p className="text-muted-foreground">Módulos</p>
-                      <p className="text-lg font-semibold">{p.modulesCompleted.length}</p>
+                      <p className="text-lg font-semibold">{(p.modulesCompleted ?? []).length}</p>
                     </div>
                     <div className="rounded-lg border p-3">
                       <p className="text-muted-foreground">Promedio</p>

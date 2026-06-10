@@ -131,7 +131,7 @@ export default function EstudiantePerfilPage() {
                 </div>
                 <Progress value={e.progress.percentComplete} className="h-2" />
                 <p className="text-xs text-muted-foreground">
-                  {e.progress.percentComplete}% · {e.progress.lessonsCompleted.length} lecciones · Promedio {e.progress.averageScore ?? 0}%
+                  {e.progress.percentComplete}% · {(e.progress.lessonsCompleted ?? []).length} lecciones · Promedio {e.progress.averageScore ?? 0}%
                 </p>
               </div>
             ))}

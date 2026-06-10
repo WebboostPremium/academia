@@ -11,10 +11,10 @@ export default function OracionesAdminPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getPrayers().then((data) => {
-      setPrayers(data);
-      setLoading(false);
-    });
+    getPrayers()
+      .then((data) => setPrayers(data))
+      .catch(() => setPrayers([]))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <p className="text-muted-foreground">Cargando oraciones...</p>;

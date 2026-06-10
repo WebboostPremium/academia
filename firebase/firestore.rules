@@ -37,6 +37,11 @@ service cloud.firestore {
       return isAuth() && request.auth.uid == userId;
     }
 
+    function isEnrolledInCourse(courseId) {
+      return isAuth()
+        && exists(/databases/$(database)/documents/enrollments/$(request.auth.uid + '_' + courseId));
+    }
+
     // ── Users ────────────────────────────────────────────────
     match /users/{userId} {
       allow read: if isOwner(userId) || isStaff();
@@ -54,7 +59,7 @@ service cloud.firestore {
     }
 
     match /courses/{courseId} {
-      allow read: if resource.data.status == 'published' || isStaff();
+      allow read: if resource.data.status == 'published' || isStaff() || isEnrolledInCourse(courseId);
       allow write: if isAdmin();
     }
 
