@@ -12,13 +12,15 @@ interface LessonSidebarProps {
   currentLessonId: string;
   enrollment: Enrollment;
   courseTitle: string;
+  onNavigate?: () => void;
+  className?: string;
 }
 
-export function LessonSidebar({ modules, lessons, currentLessonId, enrollment, courseTitle }: LessonSidebarProps) {
-  const completed = new Set(enrollment.progress.lessonsCompleted);
+export function LessonSidebar({ modules, lessons, currentLessonId, enrollment, courseTitle, onNavigate, className }: LessonSidebarProps) {
+  const completed = new Set(enrollment.progress.lessonsCompleted ?? []);
 
   return (
-    <aside className="w-full shrink-0 border-r bg-white md:w-72">
+    <aside className={cn("w-full shrink-0 border-r bg-white md:w-72", className)}>
       <div className="border-b p-4">
         <p className="text-xs font-medium text-muted-foreground">Curso</p>
         <p className="font-semibold">{courseTitle}</p>
@@ -43,6 +45,7 @@ export function LessonSidebar({ modules, lessons, currentLessonId, enrollment, c
                   <Link
                     key={lesson.id}
                     href={`/estudiante/lecciones/${lesson.id}`}
+                    onClick={onNavigate}
                     className={cn(
                       "mb-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
                       isCurrent ? "bg-primary text-white" : "hover:bg-muted/60"

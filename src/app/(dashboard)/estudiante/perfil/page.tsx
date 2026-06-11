@@ -36,24 +36,42 @@ export default function EstudiantePerfilPage() {
     if (!user) return;
     setDisplayName(user.displayName);
     setPhone(user.phone ?? "");
-    Promise.all([
-      getUserEnrollments(user.uid),
-      getCertificates({ userId: user.uid }),
-      getActivityLogsByUser(user.uid, 10),
-    ])
-      .then(async ([enr, certs, logs]) => {
+    (async () => {
+      const [enrRes, certRes, logRes] = await Promise.allSettled([
+        getUserEnrollments(user.uid),
+        fetch("/api/student/certificates", { credentials: "same-origin" }).then((r) => r.json()),
+        getActivityLogsByUser(user.uid, 10),
+      ]);
+
+      if (enrRes.status === "fulfilled") {
+        const enr = enrRes.value;
         setEnrollments(enr);
-        setCertCount(certs.length);
-        setActivity(logs);
-        const titles = await Promise.all(
+        const titles = await Promise.allSettled(
           enr.map(async (e) => {
             const course = await getCourse(e.courseId);
             return course ? ([course.id, course.title] as const) : null;
           })
         );
-        setCourseTitles(Object.fromEntries(titles.filter(Boolean) as Array<readonly [string, string]>));
-      })
-      .catch(() => toast.error("Error al cargar el perfil"));
+        setCourseTitles(
+          Object.fromEntries(
+            titles
+              .filter((r) => r.status === "fulfilled" && r.value)
+              .map((r) => (r as PromiseFulfilledResult<[string, string] | null>).value!) as Array<readonly [string, string]>
+          )
+        );
+      }
+
+      if (certRes.status === "fulfilled" && certRes.value.certificates) {
+        setCertCount(certRes.value.certificates.length);
+      } else if (certRes.status === "rejected") {
+        try {
+          const certs = await getCertificates({ userId: user.uid });
+          setCertCount(certs.length);
+        } catch { /* sin certificados */ }
+      }
+
+      if (logRes.status === "fulfilled") setActivity(logRes.value);
+    })();
   }, [user]);
 
   if (!user) return null;

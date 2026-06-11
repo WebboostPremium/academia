@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Download, ExternalLink } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Download, ExternalLink, List } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { VideoPlayer } from "@/components/lessons/video-player";
@@ -29,6 +30,7 @@ export default function EstudianteLeccionPage() {
   const [quizPassed, setQuizPassed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [marking, setMarking] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (authLoading || !user || !lessonId) return;
@@ -98,17 +100,35 @@ export default function EstudianteLeccionPage() {
   if (!lesson || !enrollment || !course) return <div className="p-8 text-center text-muted-foreground">Lección no disponible</div>;
 
   return (
-    <div className="-m-5 flex min-h-[calc(100vh-64px)] flex-col md:-m-6 md:flex-row">
-      <LessonSidebar modules={modules} lessons={lessons} currentLessonId={lessonId} enrollment={enrollment} courseTitle={course.title} />
+    <div className="-m-3 flex min-h-[calc(100vh-64px)] flex-col sm:-m-5 md:-m-6 md:flex-row">
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setSidebarOpen(false)} aria-hidden />
+      )}
+      <LessonSidebar
+        modules={modules}
+        lessons={lessons}
+        currentLessonId={lessonId}
+        enrollment={enrollment}
+        courseTitle={course.title}
+        onNavigate={() => setSidebarOpen(false)}
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 max-w-[85vw] shadow-xl transition-transform md:static md:z-auto md:max-w-none md:shadow-none",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        )}
+      />
 
-      <div className="flex flex-1 flex-col">
-        {/* Top bar */}
-        <div className="flex items-center justify-between border-b bg-white px-4 py-3">
-          <Button asChild variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-            <Link href="/estudiante/cursos"><ArrowLeft className="h-4 w-4" />Volver al curso</Link>
-          </Button>
-          <span className="text-sm font-semibold">{course.title}</span>
-          <div className="w-24">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex items-center justify-between gap-2 border-b bg-white px-3 py-3 sm:px-4">
+          <div className="flex items-center gap-1">
+            <Button type="button" variant="outline" size="sm" className="gap-1 md:hidden" onClick={() => setSidebarOpen(true)}>
+              <List className="h-4 w-4" /> Lecciones
+            </Button>
+            <Button asChild variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+              <Link href="/estudiante/lecciones"><ArrowLeft className="h-4 w-4" /><span className="hidden sm:inline">Volver</span></Link>
+            </Button>
+          </div>
+          <span className="truncate text-center text-sm font-semibold">{course.title}</span>
+          <div className="w-16 sm:w-24">
             <div className="h-1.5 overflow-hidden rounded-full bg-muted">
               <div className="h-full bg-primary" style={{ width: `${enrollment.progress.percentComplete}%` }} />
             </div>

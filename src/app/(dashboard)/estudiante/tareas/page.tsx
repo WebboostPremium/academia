@@ -9,16 +9,25 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getCourse } from "@/lib/services/courses";
-import { getUserEnrollments } from "@/lib/services/enrollments";
-import { getAssignments, getSubmissions, createSubmission } from "@/lib/services/assignments";
+import { createSubmission } from "@/lib/services/assignments";
 import { formatDate } from "@/lib/utils/format";
-import type { Assignment, Submission } from "@/types";
 
 interface AssignmentItem {
-  assignment: Assignment;
+  id: string;
+  courseId: string;
   courseTitle: string;
-  submission: Submission | null;
+  title: string;
+  instructions: string;
+  maxScore: number;
+  dueDate: string;
+  submission: {
+    id: string;
+    fileUrl: string;
+    fileName: string;
+    status: string;
+    score?: number;
+    feedback?: string;
+  } | null;
 }
 
 export default function EstudianteTareasPage() {
@@ -29,38 +38,21 @@ export default function EstudianteTareasPage() {
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (authLoading) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     async function load() {
       try {
-        const enrollments = await getUserEnrollments(user!.uid);
-        const active = enrollments.filter((e) => e.status === "active" || e.status === "completed");
-        const courseIds = active.map((e) => e.courseId);
-        const [allAssignments, allSubmissions] = await Promise.all([
-          getAssignments(),
-          getSubmissions({ userId: user!.uid }),
-        ]);
-
-        const relevant = allAssignments.filter(
-          (a) => courseIds.includes(a.courseId) && a.status === "active"
-        );
-
-        const data = await Promise.all(
-          relevant.map(async (assignment) => {
-            const course = await getCourse(assignment.courseId);
-            const submission =
-              allSubmissions.find((s) => s.assignmentId === assignment.id) ?? null;
-            return {
-              assignment,
-              courseTitle: course?.title ?? "Curso",
-              submission,
-            };
-          })
-        );
-
-        setItems(data);
-      } catch {
-        toast.error("Error al cargar las tareas");
+        const res = await fetch("/api/student/assignments", { credentials: "same-origin" });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        setItems(data.assignments ?? []);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Error al cargar las tareas");
+        setItems([]);
       } finally {
         setLoading(false);
       }
@@ -78,7 +70,7 @@ export default function EstudianteTareasPage() {
       formData.append("assignmentId", assignmentId);
       formData.append("folder", "submissions");
 
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const res = await fetch("/api/upload", { method: "POST", body: formData, credentials: "same-origin" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Error al subir archivo");
 
@@ -91,14 +83,10 @@ export default function EstudianteTareasPage() {
         status: "pending",
       });
 
-      const submissions = await getSubmissions({ userId: user.uid, assignmentId });
-      setItems((prev) =>
-        prev.map((item) =>
-          item.assignment.id === assignmentId
-            ? { ...item, submission: submissions[0] ?? null }
-            : item
-        )
-      );
+      const listRes = await fetch("/api/student/assignments", { credentials: "same-origin" });
+      const listData = await listRes.json();
+      if (listRes.ok) setItems(listData.assignments ?? []);
+
       toast.success("Tarea enviada correctamente");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error al enviar la tarea");
@@ -107,9 +95,9 @@ export default function EstudianteTareasPage() {
     }
   }
 
-  function statusLabel(status: Submission["status"]) {
-    const labels = { pending: "Pendiente de calificar", graded: "Calificada", returned: "Devuelta" };
-    return labels[status];
+  function statusLabel(status: string) {
+    const labels: Record<string, string> = { pending: "Pendiente de calificar", graded: "Calificada", returned: "Devuelta" };
+    return labels[status] ?? status;
   }
 
   if (authLoading || loading) {
@@ -124,37 +112,37 @@ export default function EstudianteTareasPage() {
         <EmptyState title="Sin tareas asignadas" description="No hay tareas pendientes en tus cursos" />
       ) : (
         <div className="space-y-4">
-          {items.map(({ assignment, courseTitle, submission }) => (
+          {items.map((assignment) => (
             <Card key={assignment.id}>
-              <CardHeader className="flex flex-row items-start justify-between gap-4">
+              <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <CardTitle className="text-base">{assignment.title}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{courseTitle}</p>
+                  <p className="text-sm text-muted-foreground">{assignment.courseTitle}</p>
                 </div>
-                <Badge variant="outline">Entrega: {formatDate(assignment.dueDate)}</Badge>
+                <Badge variant="outline" className="w-fit">Entrega: {formatDate(new Date(assignment.dueDate))}</Badge>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm">{assignment.instructions}</p>
                 <p className="text-sm text-muted-foreground">Puntaje máximo: {assignment.maxScore} pts</p>
 
-                {submission ? (
-                  <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                {assignment.submission ? (
+                  <div className="space-y-2 rounded-lg border bg-muted/30 p-4">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant={submission.status === "graded" ? "default" : "secondary"}>
-                        {statusLabel(submission.status)}
+                      <Badge variant={assignment.submission.status === "graded" ? "default" : "secondary"}>
+                        {statusLabel(assignment.submission.status)}
                       </Badge>
-                      {submission.score !== undefined && (
-                        <span className="text-sm font-medium">Nota: {submission.score} / {assignment.maxScore}</span>
+                      {assignment.submission.score !== undefined && (
+                        <span className="text-sm font-medium">Nota: {assignment.submission.score} / {assignment.maxScore}</span>
                       )}
                     </div>
                     <p className="text-sm">
                       Archivo:{" "}
-                      <a href={submission.fileUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        {submission.fileName}
+                      <a href={assignment.submission.fileUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                        {assignment.submission.fileName}
                       </a>
                     </p>
-                    {submission.feedback && (
-                      <p className="text-sm text-muted-foreground">Retroalimentación: {submission.feedback}</p>
+                    {assignment.submission.feedback && (
+                      <p className="text-sm text-muted-foreground">Retroalimentación: {assignment.submission.feedback}</p>
                     )}
                   </div>
                 ) : (

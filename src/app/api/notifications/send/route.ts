@@ -15,12 +15,26 @@ async function resolveUserIds(target: Target, userId?: string, courseId?: string
   if (target === "student" && userId) return [userId];
 
   if (target === "course" && courseId) {
-    const snap = await db
-      .collection("enrollments")
-      .where("courseId", "==", courseId)
-      .where("status", "in", ["active", "completed"])
-      .get();
-    return [...new Set(snap.docs.map((d) => d.data().userId as string))];
+    let snap;
+    try {
+      snap = await db
+        .collection("enrollments")
+        .where("courseId", "==", courseId)
+        .where("status", "in", ["active", "completed"])
+        .get();
+    } catch {
+      snap = await db.collection("enrollments").where("courseId", "==", courseId).get();
+    }
+    return [
+      ...new Set(
+        snap.docs
+          .filter((d) => {
+            const s = d.data().status;
+            return s === "active" || s === "completed";
+          })
+          .map((d) => d.data().userId as string)
+      ),
+    ];
   }
 
   const snap = await db.collection("users").where("role", "==", ROLES.ESTUDIANTE).get();

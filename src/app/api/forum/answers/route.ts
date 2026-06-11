@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { getRequestSession, isStaffRole } from "@/lib/auth/request-session";
+import { hasForumCourseAccess } from "@/lib/server/forum-access";
 import { sanitizeText } from "@/lib/utils/sanitize";
 
 export const dynamic = "force-dynamic";
@@ -33,25 +34,34 @@ export async function GET(request: NextRequest) {
   if (!question.exists) return NextResponse.json({ error: "Pregunta no encontrada" }, { status: 404 });
 
   const courseId = question.data()!.courseId as string;
-  if (!isStaffRole(session.role)) {
-    const enrollment = await getAdminDb().collection("enrollments").doc(`${session.uid}_${courseId}`).get();
-    const status = enrollment.data()?.status;
-    if (!enrollment.exists || (status !== "active" && status !== "completed")) {
+
+  try {
+    if (!(await hasForumCourseAccess(session.uid, session.role, courseId))) {
       return NextResponse.json({ error: "Sin acceso" }, { status: 403 });
     }
+
+    const db = getAdminDb();
+    let snap;
+    try {
+      snap = await db
+        .collection("forum_answers")
+        .where("questionId", "==", questionId)
+        .orderBy("createdAt", "asc")
+        .get();
+    } catch {
+      snap = await db.collection("forum_answers").where("questionId", "==", questionId).get();
+    }
+
+    const answers = snap.docs
+      .map((d) => mapAnswer(d.id, d.data()))
+      .filter((a) => isStaffRole(session.role) || a.status !== "hidden")
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+    return NextResponse.json({ answers });
+  } catch (err) {
+    console.error("[forum/answers GET]", err);
+    return NextResponse.json({ error: "Error en el foro" }, { status: 500 });
   }
-
-  const snap = await getAdminDb()
-    .collection("forum_answers")
-    .where("questionId", "==", questionId)
-    .orderBy("createdAt", "asc")
-    .get();
-
-  const answers = snap.docs
-    .map((d) => mapAnswer(d.id, d.data()))
-    .filter((a) => isStaffRole(session.role) || a.status !== "hidden");
-
-  return NextResponse.json({ answers });
 }
 
 export async function POST(request: NextRequest) {
@@ -69,6 +79,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Pregunta y respuesta son requeridos" }, { status: 400 });
   }
 
+  try {
   const db = getAdminDb();
   const questionRef = db.collection("forum_questions").doc(questionId);
   const question = await questionRef.get();
@@ -93,4 +104,8 @@ export async function POST(request: NextRequest) {
 
   const answerDoc = await answerRef.get();
   return NextResponse.json({ answer: mapAnswer(answerDoc.id, answerDoc.data()!) }, { status: 201 });
+  } catch (err) {
+    console.error("[forum/answers POST]", err);
+    return NextResponse.json({ error: "Error en el foro" }, { status: 500 });
+  }
 }

@@ -88,19 +88,21 @@ export default function EstudianteLeccionesPage() {
                     return (
                       <Link key={lesson.id} href={`/estudiante/lecciones/${lesson.id}`}>
                         <Card className="transition-colors hover:border-primary/50">
-                          <CardHeader className="flex flex-row items-center gap-3 py-4">
-                            {completed ? (
-                              <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600" />
-                            ) : (
-                              <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />
-                            )}
-                            <div className="flex-1">
-                              <CardTitle className="text-base">{lesson.title}</CardTitle>
-                              {lesson.description && (
-                                <p className="text-sm text-muted-foreground">{lesson.description}</p>
+                          <CardHeader className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
+                            <div className="flex items-start gap-3">
+                              {completed ? (
+                                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+                              ) : (
+                                <Circle className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
                               )}
+                              <div className="min-w-0 flex-1">
+                                <CardTitle className="text-base leading-snug">{lesson.title}</CardTitle>
+                                {lesson.description && (
+                                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{lesson.description}</p>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
                               {lesson.quizId && <Badge variant="outline">Quiz</Badge>}
                               <Badge variant="secondary">{lesson.estimatedMinutes} min</Badge>
                             </div>

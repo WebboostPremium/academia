@@ -24,10 +24,24 @@ export default function EstudianteCertificadosPage() {
 
     async function load() {
       try {
-        const certs = await getCertificates({ userId: user!.uid });
-        setCertificates(certs.filter((c) => c.status === "active"));
-      } catch {
-        toast.error("Error al cargar certificados");
+        const res = await fetch("/api/student/certificates", { credentials: "same-origin" });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        setCertificates(
+          (data.certificates as Array<Record<string, unknown>>)
+            .filter((c) => c.status === "active")
+            .map((c) => ({
+              ...c,
+              issuedAt: new Date(c.issuedAt as string),
+            })) as Certificate[]
+        );
+      } catch (err) {
+        try {
+          const certs = await getCertificates({ userId: user!.uid });
+          setCertificates(certs.filter((c) => c.status === "active"));
+        } catch {
+          toast.error(err instanceof Error ? err.message : "Error al cargar certificados");
+        }
       } finally {
         setLoading(false);
       }
@@ -39,7 +53,7 @@ export default function EstudianteCertificadosPage() {
   async function handleDownload(cert: Certificate) {
     setDownloadingId(cert.id);
     try {
-      const res = await fetch(`/api/certificates/${cert.id}?download=1`);
+      const res = await fetch(`/api/certificates/${cert.id}?download=1`, { credentials: "same-origin" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? "No se pudo descargar");

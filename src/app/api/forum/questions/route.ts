@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { getRequestSession, isStaffRole } from "@/lib/auth/request-session";
+import { hasForumCourseAccess } from "@/lib/server/forum-access";
 import { sanitizeText } from "@/lib/utils/sanitize";
-import type { SessionUser } from "@/types/user";
 
 export const dynamic = "force-dynamic";
 
@@ -24,14 +24,6 @@ function mapQuestion(id: string, data: FirebaseFirestore.DocumentData) {
   };
 }
 
-async function hasCourseAccess(uid: string, role: SessionUser["role"], courseId: string): Promise<boolean> {
-  if (isStaffRole(role)) return true;
-  const doc = await getAdminDb().collection("enrollments").doc(`${uid}_${courseId}`).get();
-  if (!doc.exists) return false;
-  const status = doc.data()?.status;
-  return status === "active" || status === "completed";
-}
-
 export async function GET(request: NextRequest) {
   const session = await getRequestSession(request);
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -39,21 +31,33 @@ export async function GET(request: NextRequest) {
   const courseId = request.nextUrl.searchParams.get("courseId");
   if (!courseId) return NextResponse.json({ error: "courseId requerido" }, { status: 400 });
 
-  if (!(await hasCourseAccess(session.uid, session.role, courseId))) {
-    return NextResponse.json({ error: "Sin acceso a este curso" }, { status: 403 });
+  try {
+    if (!(await hasForumCourseAccess(session.uid, session.role, courseId))) {
+      return NextResponse.json({ error: "Sin acceso a este curso" }, { status: 403 });
+    }
+
+    const db = getAdminDb();
+    let snap;
+    try {
+      snap = await db
+        .collection("forum_questions")
+        .where("courseId", "==", courseId)
+        .orderBy("createdAt", "desc")
+        .get();
+    } catch {
+      snap = await db.collection("forum_questions").where("courseId", "==", courseId).get();
+    }
+
+    const questions = snap.docs
+      .map((d) => mapQuestion(d.id, d.data()))
+      .filter((q) => isStaffRole(session.role) || q.status !== "hidden")
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    return NextResponse.json({ questions });
+  } catch (err) {
+    console.error("[forum/questions GET]", err);
+    return NextResponse.json({ error: "Error en el foro" }, { status: 500 });
   }
-
-  const snap = await getAdminDb()
-    .collection("forum_questions")
-    .where("courseId", "==", courseId)
-    .orderBy("createdAt", "desc")
-    .get();
-
-  const questions = snap.docs
-    .map((d) => mapQuestion(d.id, d.data()))
-    .filter((q) => isStaffRole(session.role) || q.status !== "hidden");
-
-  return NextResponse.json({ questions });
 }
 
 export async function POST(request: NextRequest) {
@@ -69,7 +73,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Curso, título y detalle son requeridos" }, { status: 400 });
   }
 
-  if (!(await hasCourseAccess(session.uid, session.role, courseId))) {
+  try {
+  if (!(await hasForumCourseAccess(session.uid, session.role, courseId))) {
     return NextResponse.json({ error: "Sin acceso a este curso" }, { status: 403 });
   }
 
@@ -87,4 +92,8 @@ export async function POST(request: NextRequest) {
 
   const doc = await ref.get();
   return NextResponse.json({ question: mapQuestion(doc.id, doc.data()!) }, { status: 201 });
+  } catch (err) {
+    console.error("[forum/questions POST]", err);
+    return NextResponse.json({ error: "Error en el foro" }, { status: 500 });
+  }
 }
