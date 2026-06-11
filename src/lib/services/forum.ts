@@ -1,50 +1,68 @@
+import {
+  addDoc,
+  deleteDoc,
+  getDoc,
+  getDocs,
+  increment,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+  writeBatch,
+} from "firebase/firestore";
+import { getClientDb } from "@/lib/firebase/client";
+import { fsCollection, fsDoc } from "@/lib/firebase/firestore-helpers";
 import { toDate } from "@/lib/firebase/converters";
-import type { ForumQuestion, ForumAnswer } from "@/types";
+import type { ForumAnswer, ForumQuestion } from "@/types";
 
-async function forumFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, { ...init, credentials: "same-origin" });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const message = (data as { error?: string }).error ?? `Error en el foro (${res.status})`;
-    throw new Error(message);
-  }
-  return data as T;
-}
-
-function mapQuestion(raw: Record<string, unknown>): ForumQuestion {
+function mapQuestion(id: string, data: Record<string, unknown>): ForumQuestion {
   return {
-    id: raw.id as string,
-    courseId: raw.courseId as string,
-    userId: raw.userId as string,
-    userName: raw.userName as string,
-    title: raw.title as string,
-    body: raw.body as string,
-    status: raw.status as ForumQuestion["status"],
-    answerCount: (raw.answerCount as number) ?? 0,
-    createdAt: toDate(raw.createdAt as never),
-    updatedAt: toDate(raw.updatedAt as never),
+    id,
+    courseId: data.courseId as string,
+    userId: data.userId as string,
+    userName: data.userName as string,
+    title: data.title as string,
+    body: data.body as string,
+    status: data.status as ForumQuestion["status"],
+    answerCount: (data.answerCount as number) ?? 0,
+    createdAt: toDate(data.createdAt as never),
+    updatedAt: toDate(data.updatedAt as never),
   };
 }
 
-function mapAnswer(raw: Record<string, unknown>): ForumAnswer {
+function mapAnswer(id: string, data: Record<string, unknown>): ForumAnswer {
   return {
-    id: raw.id as string,
-    questionId: raw.questionId as string,
-    userId: raw.userId as string,
-    userName: raw.userName as string,
-    body: raw.body as string,
-    isOfficial: (raw.isOfficial as boolean) ?? false,
-    status: (raw.status as ForumAnswer["status"]) ?? "visible",
-    createdAt: toDate(raw.createdAt as never),
-    updatedAt: toDate(raw.updatedAt as never),
+    id,
+    questionId: data.questionId as string,
+    userId: data.userId as string,
+    userName: data.userName as string,
+    body: data.body as string,
+    isOfficial: (data.isOfficial as boolean) ?? false,
+    status: (data.status as ForumAnswer["status"]) ?? "visible",
+    createdAt: toDate(data.createdAt as never),
+    updatedAt: toDate(data.updatedAt as never),
   };
 }
 
 export async function getQuestions(courseId: string): Promise<ForumQuestion[]> {
-  const data = await forumFetch<{ questions: Record<string, unknown>[] }>(
-    `/api/forum/questions?courseId=${encodeURIComponent(courseId)}`
-  );
-  return data.questions.map(mapQuestion);
+  try {
+    const snap = await getDocs(
+      query(
+        fsCollection("forum_questions"),
+        where("courseId", "==", courseId),
+        orderBy("createdAt", "desc")
+      )
+    );
+    return snap.docs.map((d) => mapQuestion(d.id, d.data()));
+  } catch {
+    const snap = await getDocs(
+      query(fsCollection("forum_questions"), where("courseId", "==", courseId))
+    );
+    return snap.docs
+      .map((d) => mapQuestion(d.id, d.data()))
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
 }
 
 export async function createQuestion(data: {
@@ -54,35 +72,58 @@ export async function createQuestion(data: {
   title: string;
   body: string;
 }): Promise<string> {
-  const result = await forumFetch<{ question: Record<string, unknown> }>("/api/forum/questions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      courseId: data.courseId,
-      title: data.title,
-      body: data.body,
-    }),
+  const ref = await addDoc(fsCollection("forum_questions"), {
+    courseId: data.courseId,
+    userId: data.userId,
+    userName: data.userName,
+    title: data.title.trim(),
+    body: data.body.trim(),
+    status: "open",
+    answerCount: 0,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   });
-  return result.question.id as string;
+  return ref.id;
 }
 
-export async function updateQuestionStatus(id: string, status: ForumQuestion["status"]): Promise<void> {
-  await forumFetch(`/api/forum/questions/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status }),
+export async function updateQuestionStatus(
+  id: string,
+  status: ForumQuestion["status"]
+): Promise<void> {
+  await updateDoc(fsDoc("forum_questions", id), {
+    status,
+    updatedAt: serverTimestamp(),
   });
 }
 
 export async function deleteQuestion(id: string): Promise<void> {
-  await forumFetch(`/api/forum/questions/${id}`, { method: "DELETE" });
+  const answers = await getDocs(
+    query(fsCollection("forum_answers"), where("questionId", "==", id))
+  );
+  const batch = writeBatch(getClientDb());
+  answers.docs.forEach((d) => batch.delete(d.ref));
+  batch.delete(fsDoc("forum_questions", id));
+  await batch.commit();
 }
 
 export async function getAnswers(questionId: string): Promise<ForumAnswer[]> {
-  const data = await forumFetch<{ answers: Record<string, unknown>[] }>(
-    `/api/forum/answers?questionId=${encodeURIComponent(questionId)}`
-  );
-  return data.answers.map(mapAnswer);
+  try {
+    const snap = await getDocs(
+      query(
+        fsCollection("forum_answers"),
+        where("questionId", "==", questionId),
+        orderBy("createdAt", "asc")
+      )
+    );
+    return snap.docs.map((d) => mapAnswer(d.id, d.data()));
+  } catch {
+    const snap = await getDocs(
+      query(fsCollection("forum_answers"), where("questionId", "==", questionId))
+    );
+    return snap.docs
+      .map((d) => mapAnswer(d.id, d.data()))
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  }
 }
 
 export async function createAnswer(data: {
@@ -92,22 +133,33 @@ export async function createAnswer(data: {
   body: string;
   isOfficial?: boolean;
 }): Promise<string> {
-  const result = await forumFetch<{ answer: Record<string, unknown> }>("/api/forum/answers", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      questionId: data.questionId,
-      body: data.body,
-      isOfficial: data.isOfficial,
-    }),
+  const questionRef = fsDoc("forum_questions", data.questionId);
+  const question = await getDoc(questionRef);
+  if (!question.exists()) throw new Error("Pregunta no encontrada");
+
+  const ref = await addDoc(fsCollection("forum_answers"), {
+    questionId: data.questionId,
+    userId: data.userId,
+    userName: data.userName,
+    body: data.body.trim(),
+    isOfficial: data.isOfficial !== false,
+    status: "visible",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   });
-  return result.answer.id as string;
+
+  await updateDoc(questionRef, {
+    answerCount: increment(1),
+    status: "answered",
+    updatedAt: serverTimestamp(),
+  });
+
+  return ref.id;
 }
 
 export async function hideAnswer(id: string): Promise<void> {
-  await forumFetch(`/api/forum/answers/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status: "hidden" }),
+  await updateDoc(fsDoc("forum_answers", id), {
+    status: "hidden",
+    updatedAt: serverTimestamp(),
   });
 }

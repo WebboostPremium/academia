@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAllUsers } from "@/lib/services/users";
 import { getPublishedCourses } from "@/lib/services/courses";
+import { getRecentNotifications, sendAdminNotification } from "@/lib/services/notifications";
 import { formatDateTime } from "@/lib/utils/format";
 import { ROLES } from "@/lib/constants/roles";
 import type { Notification } from "@/types";
@@ -30,25 +31,20 @@ export default function NotificacionesAdminPage() {
   const [form, setForm] = useState({ title: "", body: "", target: "general", userId: "", courseId: "" });
 
   async function load() {
-    const [notifRes, studs, crs] = await Promise.all([
-      fetch("/api/notifications/recent?limit=50", { credentials: "same-origin" }),
-      getAllUsers(ROLES.ESTUDIANTE),
-      getPublishedCourses(),
-    ]);
-
-    if (notifRes.ok) {
-      const data = await notifRes.json();
-      setNotifications(
-        (data.notifications as Array<Record<string, unknown>>).map((n) => ({
-          ...n,
-          createdAt: new Date(n.createdAt as string),
-        })) as Notification[]
-      );
+    try {
+      const [notifs, studs, crs] = await Promise.all([
+        getRecentNotifications(50),
+        getAllUsers(ROLES.ESTUDIANTE),
+        getPublishedCourses(),
+      ]);
+      setNotifications(notifs);
+      setStudents(studs.map((s) => ({ uid: s.uid, displayName: s.displayName })));
+      setCourses(crs.map((c) => ({ id: c.id, title: c.title })));
+    } catch {
+      toast.error("Error al cargar notificaciones");
+    } finally {
+      setLoading(false);
     }
-
-    setStudents(studs.map((s) => ({ uid: s.uid, displayName: s.displayName })));
-    setCourses(crs.map((c) => ({ id: c.id, title: c.title })));
-    setLoading(false);
   }
 
   useEffect(() => { load(); }, []);
@@ -57,28 +53,18 @@ export default function NotificacionesAdminPage() {
     e.preventDefault();
     setSending(true);
     try {
-      const res = await fetch("/api/notifications/send", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          target: form.target,
-          title: form.title,
-          body: form.body,
-          userId: form.userId || undefined,
-          courseId: form.courseId || undefined,
-        }),
+      const count = await sendAdminNotification({
+        target: form.target as "general" | "student" | "course",
+        title: form.title,
+        body: form.body,
+        userId: form.userId || undefined,
+        courseId: form.courseId || undefined,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error ?? "Error al enviar notificación");
-        return;
-      }
-      toast.success(`Notificación enviada a ${data.count} usuario(s)`);
+      toast.success(`Notificación enviada a ${count} usuario(s)`);
       setForm({ title: "", body: "", target: "general", userId: "", courseId: "" });
       await load();
-    } catch {
-      toast.error("Error al enviar notificación");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al enviar notificación");
     } finally {
       setSending(false);
     }

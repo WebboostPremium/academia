@@ -42,6 +42,15 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/enrollments/$(request.auth.uid + '_' + courseId));
     }
 
+    function isActiveEnrolledInCourse(courseId) {
+      return isEnrolledInCourse(courseId)
+        && get(/databases/$(database)/documents/enrollments/$(request.auth.uid + '_' + courseId)).data.status in ['active', 'completed'];
+    }
+
+    function forumQuestionCourseId(questionId) {
+      return get(/databases/$(database)/documents/forum_questions/$(questionId)).data.courseId;
+    }
+
     // ── Users ────────────────────────────────────────────────
     match /users/{userId} {
       allow read: if isOwner(userId) || isStaff();
@@ -116,15 +125,22 @@ service cloud.firestore {
     }
 
     match /forum_questions/{questionId} {
-      allow read: if isAuth();
+      allow read: if isAuth() && (
+        isStaff()
+        || (resource.data.status != 'hidden' && isActiveEnrolledInCourse(resource.data.courseId))
+      );
       allow create: if isAuth()
-        && request.resource.data.userId == request.auth.uid;
+        && request.resource.data.userId == request.auth.uid
+        && isActiveEnrolledInCourse(request.resource.data.courseId);
       allow update, delete: if isStaff()
         || (isAuth() && resource.data.userId == request.auth.uid);
     }
 
     match /forum_answers/{answerId} {
-      allow read: if isAuth();
+      allow read: if isAuth() && (
+        isStaff()
+        || (resource.data.status != 'hidden' && isActiveEnrolledInCourse(forumQuestionCourseId(resource.data.questionId)))
+      );
       allow create: if isStaff();
       allow update, delete: if isStaff();
     }
