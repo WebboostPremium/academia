@@ -14,6 +14,7 @@ import { getUserEnrollments } from "@/lib/services/enrollments";
 import { getUpcomingClasses } from "@/lib/services/live-classes";
 import { getPrayers, getPrayerProgress } from "@/lib/services/prayers";
 import { getQuizResults } from "@/lib/services/quizzes";
+import { getNewsArticles } from "@/lib/services/news";
 import { formatDateTime } from "@/lib/utils/format";
 import type { Course, Enrollment } from "@/types/course";
 
@@ -43,17 +44,23 @@ export default function EstudianteDashboardPage() {
           getUserEnrollments(user!.uid),
           getPrayers(),
           getPrayerProgress(user!.uid),
-          fetch("/api/public/news").then((r) => (r.ok ? r.json() : { articles: [] })).catch(() => ({ articles: [] })),
+          getNewsArticles(true),
         ]);
 
         const userEnrollments = enrollmentsRes.status === "fulfilled" ? enrollmentsRes.value : [];
         const prayers = prayersRes.status === "fulfilled" ? prayersRes.value : [];
         const prayerProgress = progressRes.status === "fulfilled" ? progressRes.value : [];
-        const news = newsRes.status === "fulfilled" ? newsRes.value : { articles: [] };
+        const news = newsRes.status === "fulfilled" ? newsRes.value : [];
 
         if (enrollmentsRes.status === "rejected") toast.error("No se pudieron cargar tus cursos");
 
-        setAnnouncements((news.articles ?? []).slice(0, 5));
+        setAnnouncements(
+          news.slice(0, 5).map((a) => ({
+            slug: a.slug,
+            title: a.title,
+            excerpt: a.excerpt,
+          }))
+        );
         const active = userEnrollments.filter((e) => e.status === "active" || e.status === "completed");
         const enrolled = (await Promise.allSettled(
           active.map(async (enrollment) => {

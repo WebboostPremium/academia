@@ -30,7 +30,7 @@ export default function ForoAdminPage() {
     "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
   async function loadAllQuestions(courseList: Course[]) {
-    const qs = await Promise.all(courseList.map((c) => getQuestions(c.id)));
+    const qs = await Promise.all(courseList.map((c) => getQuestions(c.id, { includeHidden: true })));
     return qs.flat().sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
@@ -51,7 +51,7 @@ export default function ForoAdminPage() {
         if (courseId === "all") {
           setQuestions(await loadAllQuestions(courses));
         } else {
-          setQuestions(await getQuestions(courseId));
+          setQuestions(await getQuestions(courseId, { includeHidden: true }));
         }
       } catch {
         toast.error("Error al filtrar preguntas");
@@ -86,7 +86,7 @@ export default function ForoAdminPage() {
       if (courseId === "all") {
         setQuestions(await loadAllQuestions(courses));
       } else if (courseId) {
-        setQuestions(await getQuestions(courseId));
+        setQuestions(await getQuestions(courseId, { includeHidden: true }));
       }
     } catch {
       toast.error("Error al actualizar el foro");

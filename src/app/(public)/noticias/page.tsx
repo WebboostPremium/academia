@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { formatDate } from "@/lib/utils/format";
-import { toDate } from "@/lib/firebase/converters";
+import { getNewsArticles } from "@/lib/services/news";
 import type { NewsArticle } from "@/types/news";
 
 export default function NoticiasPage() {
@@ -13,25 +13,8 @@ export default function NoticiasPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/public/news")
-      .then((r) => r.json())
-      .then((data) => {
-        const items = (data.articles ?? []).map((a: Record<string, unknown>) => ({
-          id: a.id,
-          slug: a.slug,
-          title: a.title,
-          excerpt: a.excerpt,
-          content: a.content,
-          imageUrl: a.imageUrl,
-          author: a.author,
-          status: a.status,
-          publishedAt: a.publishedAt ? toDate(a.publishedAt as never) : undefined,
-          createdAt: toDate(a.createdAt as never),
-          updatedAt: toDate(a.updatedAt as never),
-          tags: a.tags,
-        })) as NewsArticle[];
-        setArticles(items);
-      })
+    getNewsArticles(true)
+      .then(setArticles)
       .catch(() => setArticles([]))
       .finally(() => setLoading(false));
   }, []);

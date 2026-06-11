@@ -21,11 +21,20 @@ function mapArticle(id: string, data: Record<string, unknown>): NewsArticle {
 }
 
 export async function getNewsArticles(publishedOnly = false): Promise<NewsArticle[]> {
-  const q = publishedOnly
-    ? query(fsCollection("news"), where("status", "==", "published"), orderBy("publishedAt", "desc"))
-    : query(fsCollection("news"), orderBy("publishedAt", "desc"));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => mapArticle(d.id, d.data()));
+  try {
+    const q = publishedOnly
+      ? query(fsCollection("news"), where("status", "==", "published"), orderBy("publishedAt", "desc"))
+      : query(fsCollection("news"), orderBy("publishedAt", "desc"));
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => mapArticle(d.id, d.data()));
+  } catch {
+    const snap = await getDocs(fsCollection("news"));
+    let articles = snap.docs.map((d) => mapArticle(d.id, d.data()));
+    if (publishedOnly) articles = articles.filter((a) => a.status === "published");
+    return articles.sort(
+      (a, b) => (b.publishedAt?.getTime() ?? b.createdAt.getTime()) - (a.publishedAt?.getTime() ?? a.createdAt.getTime())
+    );
+  }
 }
 
 export async function getNewsBySlug(slug: string): Promise<NewsArticle | null> {

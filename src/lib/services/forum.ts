@@ -1,6 +1,5 @@
 import {
   addDoc,
-  deleteDoc,
   getDoc,
   getDocs,
   increment,
@@ -10,11 +9,24 @@ import {
   updateDoc,
   where,
   writeBatch,
+  type QueryConstraint,
 } from "firebase/firestore";
 import { getClientDb } from "@/lib/firebase/client";
 import { fsCollection, fsDoc } from "@/lib/firebase/firestore-helpers";
 import { toDate } from "@/lib/firebase/converters";
 import type { ForumAnswer, ForumQuestion } from "@/types";
+
+const VISIBLE_QUESTION_STATUSES = ["open", "answered", "closed"];
+
+function firestoreErrorMessage(err: unknown): string {
+  if (err && typeof err === "object" && "code" in err) {
+    const code = String((err as { code: string }).code);
+    if (code === "permission-denied") {
+      return "Sin permiso para acceder al foro. Verifica tu inscripción activa.";
+    }
+  }
+  return err instanceof Error ? err.message : "Error en el foro";
+}
 
 function mapQuestion(id: string, data: Record<string, unknown>): ForumQuestion {
   return {
@@ -45,23 +57,33 @@ function mapAnswer(id: string, data: Record<string, unknown>): ForumAnswer {
   };
 }
 
-export async function getQuestions(courseId: string): Promise<ForumQuestion[]> {
-  try {
-    const snap = await getDocs(
-      query(
-        fsCollection("forum_questions"),
-        where("courseId", "==", courseId),
-        orderBy("createdAt", "desc")
-      )
-    );
+export async function getQuestions(
+  courseId: string,
+  options?: { includeHidden?: boolean }
+): Promise<ForumQuestion[]> {
+  const includeHidden = options?.includeHidden ?? false;
+
+  async function fetchQuestions(withOrder: boolean) {
+    const constraints: QueryConstraint[] = [where("courseId", "==", courseId)];
+    if (!includeHidden) {
+      constraints.push(where("status", "in", VISIBLE_QUESTION_STATUSES));
+    }
+    if (withOrder) {
+      constraints.push(orderBy("createdAt", "desc"));
+    }
+    const snap = await getDocs(query(fsCollection("forum_questions"), ...constraints));
     return snap.docs.map((d) => mapQuestion(d.id, d.data()));
+  }
+
+  try {
+    return await fetchQuestions(true);
   } catch {
-    const snap = await getDocs(
-      query(fsCollection("forum_questions"), where("courseId", "==", courseId))
-    );
-    return snap.docs
-      .map((d) => mapQuestion(d.id, d.data()))
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    try {
+      const results = await fetchQuestions(false);
+      return results.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    } catch (err) {
+      throw new Error(firestoreErrorMessage(err));
+    }
   }
 }
 
@@ -106,23 +128,33 @@ export async function deleteQuestion(id: string): Promise<void> {
   await batch.commit();
 }
 
-export async function getAnswers(questionId: string): Promise<ForumAnswer[]> {
-  try {
-    const snap = await getDocs(
-      query(
-        fsCollection("forum_answers"),
-        where("questionId", "==", questionId),
-        orderBy("createdAt", "asc")
-      )
-    );
+export async function getAnswers(
+  questionId: string,
+  options?: { includeHidden?: boolean }
+): Promise<ForumAnswer[]> {
+  const includeHidden = options?.includeHidden ?? false;
+
+  async function fetchAnswers(withOrder: boolean) {
+    const constraints: QueryConstraint[] = [where("questionId", "==", questionId)];
+    if (!includeHidden) {
+      constraints.push(where("status", "==", "visible"));
+    }
+    if (withOrder) {
+      constraints.push(orderBy("createdAt", "asc"));
+    }
+    const snap = await getDocs(query(fsCollection("forum_answers"), ...constraints));
     return snap.docs.map((d) => mapAnswer(d.id, d.data()));
+  }
+
+  try {
+    return await fetchAnswers(true);
   } catch {
-    const snap = await getDocs(
-      query(fsCollection("forum_answers"), where("questionId", "==", questionId))
-    );
-    return snap.docs
-      .map((d) => mapAnswer(d.id, d.data()))
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    try {
+      const results = await fetchAnswers(false);
+      return results.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    } catch (err) {
+      throw new Error(firestoreErrorMessage(err));
+    }
   }
 }
 

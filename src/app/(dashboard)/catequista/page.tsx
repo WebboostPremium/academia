@@ -35,7 +35,7 @@ export default function CatequistaDashboardPage() {
         const submissions = (await getSubmissions({ status: "pending" })).filter((s) => studentIds.has(s.userId));
         const classes = await getUpcomingClasses();
         const courses = await getPublishedCourses();
-        const questions = (await Promise.all(courses.map((c) => getQuestions(c.id)))).flat().filter((q) => q.status === "open");
+        const questions = (await Promise.all(courses.map((c) => getQuestions(c.id, { includeHidden: true })))).flat().filter((q) => q.status === "open");
 
         setStats({ students: students.length, tasks: submissions.length, classes: classes.length, questions: questions.length });
 

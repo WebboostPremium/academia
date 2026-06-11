@@ -40,13 +40,13 @@ export default function ForoPage() {
     if (!courseId) return;
     async function loadForum() {
       try {
-        const qs = await getQuestions(courseId);
+        const qs = await getQuestions(courseId, { includeHidden: true });
         const open = qs.filter((q) => q.status === "open" || q.status === "answered");
         setQuestions(open);
         const answerMap: Record<string, ForumAnswer[]> = {};
         await Promise.all(
           open.map(async (q) => {
-            answerMap[q.id] = await getAnswers(q.id);
+            answerMap[q.id] = await getAnswers(q.id, { includeHidden: true });
           })
         );
         setAnswers(answerMap);
@@ -73,7 +73,7 @@ export default function ForoPage() {
       toast.success("Respuesta publicada oficialmente");
       setReplyingId(null);
       setReplyBody("");
-      const updated = await getAnswers(replyingId);
+      const updated = await getAnswers(replyingId, { includeHidden: true });
       setAnswers((prev) => ({ ...prev, [replyingId]: updated }));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error al publicar la respuesta");

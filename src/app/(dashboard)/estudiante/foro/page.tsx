@@ -70,8 +70,8 @@ export default function EstudianteForoPage() {
           }))
         );
         setQuestions(items);
-      } catch {
-        toast.error("Error al cargar preguntas del foro");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Error al cargar preguntas del foro");
       }
     }
 

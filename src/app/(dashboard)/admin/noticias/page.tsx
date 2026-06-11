@@ -10,44 +10,27 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  createNewsArticle,
+  deleteNewsArticle,
+  getNewsArticles,
+  updateNewsArticle,
+} from "@/lib/services/news";
+import { sendAdminNotification } from "@/lib/services/notifications";
 import { formatDate } from "@/lib/utils/format";
-
-interface NewsItem {
-  id: string;
-  slug: string;
-  title: string;
-  excerpt?: string;
-  content: string;
-  author: string;
-  imageUrl?: string;
-  status: string;
-  publishedAt?: string;
-}
+import type { NewsArticle } from "@/types/news";
 
 function slugify(text: string) {
-  return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-}
-
-async function announceToStudents(article: NewsItem) {
-  const res = await fetch("/api/notifications/send", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      target: "general",
-      title: `Anuncio: ${article.title}`,
-      body: article.excerpt || article.content || article.title,
-      link: `/noticias/${article.slug}`,
-    }),
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error((data as { error?: string }).error ?? "No se pudo notificar");
-  }
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 }
 
 export default function AdminNoticiasPage() {
-  const [articles, setArticles] = useState<NewsItem[]>([]);
+  const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [announce, setAnnounce] = useState(true);
@@ -55,10 +38,7 @@ export default function AdminNoticiasPage() {
 
   async function load() {
     try {
-      const res = await fetch("/api/admin/news", { credentials: "same-origin" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setArticles(data.articles ?? []);
+      setArticles(await getNewsArticles());
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error al cargar noticias");
       setArticles([]);
@@ -67,7 +47,9 @@ export default function AdminNoticiasPage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -76,21 +58,15 @@ export default function AdminNoticiasPage() {
       return;
     }
     try {
-      const res = await fetch("/api/admin/news", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slug: slugify(form.title),
-          title: form.title.trim(),
-          excerpt: form.excerpt.trim() || undefined,
-          content: form.content.trim() || form.excerpt.trim() || form.title.trim(),
-          author: form.author.trim() || "Administrador",
-          imageUrl: form.imageUrl.trim() || undefined,
-        }),
+      await createNewsArticle({
+        slug: slugify(form.title),
+        title: form.title.trim(),
+        excerpt: form.excerpt.trim() || undefined,
+        content: form.content.trim() || form.excerpt.trim() || form.title.trim(),
+        author: form.author.trim() || "Administrador",
+        imageUrl: form.imageUrl.trim() || undefined,
+        status: "draft",
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
       toast.success("Anuncio guardado");
       setShowForm(false);
       setForm({ title: "", excerpt: "", content: "", author: "Administrador", imageUrl: "" });
@@ -100,20 +76,21 @@ export default function AdminNoticiasPage() {
     }
   }
 
-  async function togglePublish(article: NewsItem) {
+  async function togglePublish(article: NewsArticle) {
     const publishing = article.status !== "published";
     try {
-      const res = await fetch(`/api/admin/news/${article.id}`, {
-        method: "PATCH",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: publishing ? "published" : "draft" }),
+      await updateNewsArticle(article.id, {
+        status: publishing ? "published" : "draft",
+        publishedAt: publishing ? new Date() : undefined,
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error((data as { error?: string }).error ?? "Error al publicar");
+      if (publishing && announce) {
+        await sendAdminNotification({
+          target: "general",
+          title: `Anuncio: ${article.title}`,
+          body: article.excerpt || article.content || article.title,
+          link: `/noticias/${article.slug}`,
+        });
       }
-      if (publishing && announce) await announceToStudents(article);
       toast.success(publishing ? "Publicado" : "Despublicado");
       await load();
     } catch (err) {
@@ -124,8 +101,7 @@ export default function AdminNoticiasPage() {
   async function handleDelete(id: string) {
     if (!confirm("¿Eliminar este anuncio?")) return;
     try {
-      const res = await fetch(`/api/admin/news/${id}`, { method: "DELETE", credentials: "same-origin" });
-      if (!res.ok) throw new Error("Error al eliminar");
+      await deleteNewsArticle(id);
       toast.success("Eliminado");
       await load();
     } catch {
@@ -172,7 +148,7 @@ export default function AdminNoticiasPage() {
         columns={[
           { key: "title", header: "Título", render: (a) => a.title },
           { key: "status", header: "Estado", render: (a) => <Badge>{a.status === "published" ? "Publicado" : "Borrador"}</Badge> },
-          { key: "date", header: "Fecha", render: (a) => a.publishedAt ? formatDate(new Date(a.publishedAt)) : "—" },
+          { key: "date", header: "Fecha", render: (a) => (a.publishedAt ? formatDate(a.publishedAt) : "—") },
           {
             key: "actions",
             header: "Acciones",
