@@ -23,7 +23,7 @@ export const FAQ_ITEMS = [
   { q: "¿Puedo contactar a un catequista?", a: "Sí. Tienes foro, clases en vivo y canales de contacto institucional para recibir acompañamiento." },
 ];
 
-export const PROMO_VIDEO_ID = "dQw4w9WgXcQ";
+export const PROMO_VIDEO_ID = "TeWU6ARpwcU";
 
 export const HERO_IMAGE = "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=700&h=500&fit=crop";
 
