@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 
 interface ImageUploadProps {
-  folder: "avatars" | "courses" | "logos" | "banners";
+  folder: "avatars" | "courses" | "logos" | "banners" | "news" | "signatures";
   value?: string;
   onChange: (url: string) => void;
   label?: string;

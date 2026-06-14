@@ -404,11 +404,21 @@ export default function ConfiguracionPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="signatureUrl">URL de imagen de firma</Label>
+                <Label>Firma digital (imagen)</Label>
+                <ImageUpload
+                  folder="signatures"
+                  value={certificates.signatureUrl ?? ""}
+                  onChange={(url) => setCertificates((p) => ({ ...p, signatureUrl: url }))}
+                  label="Subir firma digital"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signatureUrl">O pegar URL de firma</Label>
                 <Input
                   id="signatureUrl"
                   value={certificates.signatureUrl ?? ""}
                   onChange={(e) => setCertificates((p) => ({ ...p, signatureUrl: e.target.value }))}
+                  placeholder="https://..."
                 />
               </div>
               <div className="space-y-2">

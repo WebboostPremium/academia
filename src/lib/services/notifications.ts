@@ -15,11 +15,29 @@ export async function getRecentNotifications(max = 50): Promise<Notification[]> 
 }
 
 export async function getNotifications(userId: string): Promise<Notification[]> {
-  const snap = await getDocs(query(fsCollection("notifications"), where("userId", "==", userId), orderBy("createdAt", "desc")));
-  return snap.docs.map((d) => {
-    const data = d.data();
-    return { id: d.id, ...data, createdAt: toDate(data.createdAt) } as Notification;
-  });
+  try {
+    const snap = await getDocs(
+      query(
+        fsCollection("notifications"),
+        where("userId", "==", userId),
+        orderBy("createdAt", "desc")
+      )
+    );
+    return snap.docs.map((d) => {
+      const data = d.data();
+      return { id: d.id, ...data, createdAt: toDate(data.createdAt) } as Notification;
+    });
+  } catch {
+    const snap = await getDocs(
+      query(fsCollection("notifications"), where("userId", "==", userId))
+    );
+    return snap.docs
+      .map((d) => {
+        const data = d.data();
+        return { id: d.id, ...data, createdAt: toDate(data.createdAt) } as Notification;
+      })
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
 }
 
 export async function getUnreadCount(userId: string): Promise<number> {

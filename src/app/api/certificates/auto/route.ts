@@ -55,13 +55,14 @@ export async function POST(request: NextRequest) {
   const user = userDoc.data()!;
   const course = courseDoc.data()!;
   const settings = settingsDoc.data() ?? {};
+  const institution = settings.institution ?? {};
   const certSettings = settings.certificates ?? {};
 
   const certCount = (await db.collection("certificates").get()).size + 1;
   const certificateNumber = `CERT-${new Date().getFullYear()}-${String(certCount).padStart(5, "0")}`;
 
   const pdfBuffer = await buildCertificatePdf({
-    institutionName: certSettings.headerTitle ?? settings.institution?.name ?? "Catequesis Online",
+    institutionName: certSettings.headerTitle ?? institution.name ?? "Catequesis Online",
     titleText: certSettings.titleText ?? "Certificado de Completación",
     bodyText: certSettings.bodyText ?? "Se certifica que",
     studentName: user.displayName,
@@ -70,6 +71,10 @@ export async function POST(request: NextRequest) {
     signatureName: certSettings.signatureName,
     signatureTitle: certSettings.signatureTitle,
     footer: certSettings.templateFooter,
+    logoUrl: institution.logoUrl || "/brand/logo-catequesis-online.jpg",
+    signatureUrl: certSettings.signatureUrl,
+    borderColor: certSettings.borderColor,
+    showLogo: certSettings.showLogo,
   });
 
   const pdfUrl = await uploadPdfToCloudinary(

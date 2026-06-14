@@ -17,6 +17,7 @@ import {
   updateNewsArticle,
 } from "@/lib/services/news";
 import { sendAdminNotification } from "@/lib/services/notifications";
+import { ImageUpload } from "@/components/shared/image-upload";
 import { formatDate } from "@/lib/utils/format";
 import type { NewsArticle } from "@/types/news";
 
@@ -128,7 +129,7 @@ export default function AdminNoticiasPage() {
               <div className="space-y-2 sm:col-span-2"><Label>Resumen (opcional)</Label><Input value={form.excerpt} onChange={(e) => setForm({ ...form, excerpt: e.target.value })} /></div>
               <div className="space-y-2 sm:col-span-2"><Label>Contenido (opcional)</Label><Textarea value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={6} /></div>
               <div className="space-y-2"><Label>Autor</Label><Input value={form.author} onChange={(e) => setForm({ ...form, author: e.target.value })} /></div>
-              <div className="space-y-2"><Label>Imagen URL</Label><Input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Imagen del anuncio</Label><ImageUpload folder="news" value={form.imageUrl} onChange={(url) => setForm({ ...form, imageUrl: url })} label="Elegir imagen" /></div>
               <div className="sm:col-span-2"><Button type="submit">Guardar borrador</Button></div>
             </form>
           </CardContent>

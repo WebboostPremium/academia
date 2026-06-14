@@ -1,6 +1,6 @@
 import {
   Home, BookOpen, PlayCircle, ClipboardList, FileText, TrendingUp,
-  Heart, Award, ShoppingBag, Calendar, MessageSquare, User,
+  Heart, Award, ShoppingBag, Calendar, MessageSquare, User, Bell,
 } from "lucide-react";
 import type { NavItem } from "@/components/layout/sidebar";
 
@@ -17,5 +17,6 @@ export const estudianteNavItems: NavItem[] = [
   { title: "Clases en Vivo", href: "/estudiante/clases", icon: <Calendar className="h-4 w-4" /> },
   { title: "Calendario", href: "/estudiante/calendario", icon: <Calendar className="h-4 w-4" /> },
   { title: "Foro", href: "/estudiante/foro", icon: <MessageSquare className="h-4 w-4" /> },
+  { title: "Notificaciones", href: "/estudiante/notificaciones", icon: <Bell className="h-4 w-4" /> },
   { title: "Mi Perfil", href: "/estudiante/perfil", icon: <User className="h-4 w-4" /> },
 ];

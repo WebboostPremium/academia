@@ -163,7 +163,7 @@ export function CourseEnrollment({ slug }: { slug: string }) {
 
           {course.instructor && (
             <section>
-              <h2 className="text-xl font-bold">Instructor</h2>
+              <h2 className="text-xl font-bold">Catequista</h2>
               <div className="mt-4 flex items-start gap-4 rounded-xl border p-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <User className="h-6 w-6" />

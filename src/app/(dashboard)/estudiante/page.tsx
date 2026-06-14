@@ -134,9 +134,14 @@ export default function EstudianteDashboardPage() {
 
       {announcements.length > 0 && (
         <div className="card-shadow rounded-2xl bg-white p-5">
-          <div className="mb-3 flex items-center gap-2 text-primary">
-            <Megaphone className="h-5 w-5" />
-            <h2 className="font-semibold">Anuncios de la parroquia</h2>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-primary">
+              <Megaphone className="h-5 w-5" />
+              <h2 className="font-semibold">Anuncios de la parroquia</h2>
+            </div>
+            <Link href="/estudiante/notificaciones" className="text-sm text-primary hover:underline">
+              Ver buzón
+            </Link>
           </div>
           <ul className="space-y-3">
             {announcements.map((item) => (

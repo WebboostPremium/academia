@@ -225,7 +225,7 @@ export default function CursosAdminPage() {
                 <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required />
               </div>
               <div className="space-y-2">
-                <Label>Instructor</Label>
+                <Label>Catequista</Label>
                 <Input value={form.instructor} onChange={(e) => setForm({ ...form, instructor: e.target.value })} required />
               </div>
               <div className="space-y-2">
@@ -233,7 +233,7 @@ export default function CursosAdminPage() {
                 <Input value={form.durationLabel} onChange={(e) => setForm({ ...form, durationLabel: e.target.value })} placeholder="Ej: 8 semanas" />
               </div>
               <div className="space-y-2 sm:col-span-2">
-                <Label>Biografía del instructor</Label>
+                <Label>Biografía del catequista</Label>
                 <Textarea value={form.instructorBio} onChange={(e) => setForm({ ...form, instructorBio: e.target.value })} rows={2} />
               </div>
               <div className="space-y-2 sm:col-span-2">

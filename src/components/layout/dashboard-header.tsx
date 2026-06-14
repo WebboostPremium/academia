@@ -1,12 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import Image from "next/image";
 import { Bell, LogOut, Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
-import { ROLE_LABELS } from "@/lib/constants/roles";
+import { useUnreadNotifications } from "@/hooks/use-unread-notifications";
+import { ROLE_LABELS, ROLES } from "@/lib/constants/roles";
 
 interface DashboardHeaderProps {
   onMenuClick?: () => void;
@@ -15,7 +17,13 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ onMenuClick, title }: DashboardHeaderProps) {
   const { user, signOut } = useAuth();
+  const { count: unreadCount } = useUnreadNotifications(
+    user?.role === ROLES.ESTUDIANTE ? user.uid : undefined
+  );
   const initials = user?.displayName?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() ?? "U";
+
+  const notificationsHref =
+    user?.role === ROLES.ESTUDIANTE ? "/estudiante/notificaciones" : undefined;
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur sm:px-6">
@@ -31,10 +39,22 @@ export function DashboardHeader({ onMenuClick, title }: DashboardHeaderProps) {
       </div>
       <div className="flex items-center gap-3">
         <ThemeToggle />
-        <Button variant="ghost" size="icon" className="relative rounded-full">
-          <Bell className="h-5 w-5 text-muted-foreground" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-primary" />
-        </Button>
+        {notificationsHref ? (
+          <Button variant="ghost" size="icon" className="relative rounded-full" asChild>
+            <Link href={notificationsHref} aria-label="Notificaciones">
+              <Bell className="h-5 w-5 text-muted-foreground" />
+              {unreadCount > 0 && (
+                <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </Link>
+          </Button>
+        ) : (
+          <Button variant="ghost" size="icon" className="relative rounded-full" disabled>
+            <Bell className="h-5 w-5 text-muted-foreground" />
+          </Button>
+        )}
         <div className="flex items-center gap-2.5">
           <div className="hidden text-right sm:block">
             <p className="text-sm font-semibold leading-none">{user?.displayName}</p>

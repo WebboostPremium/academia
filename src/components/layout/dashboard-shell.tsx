@@ -29,10 +29,10 @@ export function DashboardShell({ navItems, children }: DashboardShellProps) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
         <p className="max-w-md text-muted-foreground">
-          No se pudo cargar tu sesión. Cierra sesión e ingresa de nuevo.
+          Tu sesión fue cerrada. Vuelve a iniciar sesión para continuar.
         </p>
         <Button asChild>
-          <Link href="/login">Ir al login</Link>
+          <Link href="/login">Ir a iniciar sesión</Link>
         </Button>
       </div>
     );
