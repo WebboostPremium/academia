@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarClock, Headphones, X } from "lucide-react";
+import { HandHeart, Sparkles, X } from "lucide-react";
 
-const STORAGE_KEY = "webboost-admin-notice-dismissed";
+const STORAGE_KEY = "webboost-admin-notice-dismissed-v2";
 
 export function WebboostNotice() {
   const [visible, setVisible] = useState(false);
@@ -28,33 +28,36 @@ export function WebboostNotice() {
         <X className="h-4 w-4" />
       </button>
 
-      <p className="text-xs font-semibold uppercase tracking-widest text-primary">Aviso Webboost</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-primary">Mensaje de Webboost</p>
       <h2 className="mt-1 pr-8 font-serif text-lg font-semibold sm:text-xl">
-        Recuerda la fecha de pago de tu plataforma
+        Estamos aquí para acompañarlos
       </h2>
       <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-        Este es un recordatorio de tu <strong className="text-foreground">fecha de pago</strong> por
-        el servicio y mantenimiento de Catequesis Online. Mantener el pago al día asegura que el
-        sitio, los cursos y el panel sigan funcionando sin interrupciones.
+        Notamos que la plataforma aún no se está usando con todo su potencial. En{" "}
+        <strong className="text-foreground">Webboost</strong> con mucho gusto estamos para
+        ayudarles: capacitación, ajustes, nuevas funciones o cualquier duda que tengan.
+        Solo díganos qué necesitan y los acompañamos.
       </p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <div className="flex gap-3 rounded-xl bg-background/80 p-3 ring-1 ring-border/60">
-          <CalendarClock className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
           <div>
-            <p className="text-sm font-medium">Pago de la plataforma</p>
+            <p className="text-sm font-medium">Aprovecha Catequesis Online</p>
             <p className="text-xs text-muted-foreground">
-              Anota tu fecha de pago mensual y coordínala con Webboost para no perder el servicio.
+              Cursos, lecciones, foro, anuncios y certificados ya están listos para sus
+              familias y catequistas.
             </p>
           </div>
         </div>
         <div className="flex gap-3 rounded-xl bg-background/80 p-3 ring-1 ring-border/60">
-          <Headphones className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+          <HandHeart className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
           <div>
-            <p className="text-sm font-medium">¿Necesitas un cambio?</p>
+            <p className="text-sm font-medium">¿Necesitan apoyo?</p>
             <p className="text-xs text-muted-foreground">
-              Cualquier ajuste, mejora o función nueva que quieras en la plataforma,{" "}
-              <strong className="text-foreground">Webboost está para ayudarte</strong>.
+              Si quieren cambios, mejoras o una guía para empezar a usarla,{" "}
+              <strong className="text-foreground">Webboost está para ayudarles</strong>.
+              Cuéntenos y lo resolvemos juntos.
             </p>
           </div>
         </div>
