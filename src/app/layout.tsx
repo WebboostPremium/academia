@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
 import { Providers } from "./providers";
+import { PlatformPause } from "@/components/platform-pause";
+import { PLATFORM_PAUSED } from "@/lib/constants/platform-status";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -59,10 +61,9 @@ export const metadata: Metadata = {
       "Prepara los sacramentos de Bautismo, Primera Comunión y Confirmación con la guía de tu parroquia.",
     images: ["/og-image.jpg"],
   },
-  robots: {
-    index: true,
-    follow: true,
-  },
+  robots: PLATFORM_PAUSED
+    ? { index: false, follow: false }
+    : { index: true, follow: true },
 };
 
 export default function RootLayout({
@@ -77,7 +78,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${sourceSerif.variable} bg-background`}
     >
       <body className="min-h-full font-sans antialiased">
-        <Providers>{children}</Providers>
+        {PLATFORM_PAUSED ? <PlatformPause /> : <Providers>{children}</Providers>}
       </body>
     </html>
   );
